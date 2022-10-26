@@ -160,7 +160,11 @@ public:
         std::lock_guard<std::mutex> lock2(odoLock);
         odomQueue.push_back(*odometryMsg);
     }
-
+    /**
+     * @brief 接收原始点云数据，进行处理
+     * 
+     * @param laserCloudMsg 
+     */
     void cloudHandler(const sensor_msgs::PointCloud2ConstPtr& laserCloudMsg)
     {
         // 1.缓存点云, 激光点云格式转化, 检查是否有ring和time通道

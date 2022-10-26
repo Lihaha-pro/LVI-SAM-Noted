@@ -61,12 +61,12 @@ public:
     bool doneFirstOpt = false;
     double lastImuT_imu = -1;
     double lastImuT_opt = -1;
-
+    
     gtsam::ISAM2 optimizer;
     gtsam::NonlinearFactorGraph graphFactors;
     gtsam::Values graphValues;
 
-    const double delta_t = 0;
+    const double delta_t = 0;//imu和激光雷达的时间偏差补偿
 
     int key = 1;
     int imuPreintegrationResetId = 0;
@@ -240,7 +240,7 @@ public:
         }
 
 
-        // 1. integrate imu data and optimize
+        // Step 1. integrate imu data and optimize
         //预积分两帧之间的IMU数据
         while (!imuQueOpt.empty())
         {
@@ -420,7 +420,7 @@ public:
         odometry.pose.covariance[5] = prevBiasOdom.gyroscope().y();
         odometry.pose.covariance[6] = prevBiasOdom.gyroscope().z();
         odometry.pose.covariance[7] = imuGravity;
-        pubImuOdometry.publish(odometry);
+        pubImuOdometry.publish(odometry);///发送IMU频率的当前估计的位姿，话题为/odometry/imu
 
         // publish imu path
         static nav_msgs::Path imuPath;

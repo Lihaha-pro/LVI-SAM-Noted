@@ -123,7 +123,7 @@ public:
 
     // CPU Params
     int numberOfCores;
-    double mappingProcessInterval;
+    double mappingProcessInterval; //yaml中定义的优化时间间隔，设置为0.15
 
     // Surrounding map
     float surroundingkeyframeAddingDistThreshold; 
