@@ -165,7 +165,7 @@ public:
         pubLaserCloudSurround = nh.advertise<sensor_msgs::PointCloud2>(PROJECT_NAME + "/lidar/mapping/map_global", 1); // 全局地图点云(1000m以内)
         pubOdomAftMappedROS   = nh.advertise<nav_msgs::Odometry>      (PROJECT_NAME + "/lidar/mapping/odometry", 1);   // 激光里程计(优化以后的, 一帧一帧的发)
         pubPath               = nh.advertise<nav_msgs::Path>          (PROJECT_NAME + "/lidar/mapping/path", 1);       // 整条里程计轨迹(优化后的)
-
+        //订阅特征点 GPS 回环信息
         subLaserCloudInfo     = nh.subscribe<lvi_sam::cloud_info>     (PROJECT_NAME + "/lidar/feature/cloud_info", 5, &mapOptimization::laserCloudInfoHandler, this, ros::TransportHints().tcpNoDelay());
         subGPS                = nh.subscribe<nav_msgs::Odometry>      (gpsTopic,                                   50, &mapOptimization::gpsHandler, this, ros::TransportHints().tcpNoDelay());
         subLoopInfo           = nh.subscribe<std_msgs::Float64MultiArray>(PROJECT_NAME + "/vins/loop/match_frame", 5, &mapOptimization::loopHandler, this, ros::TransportHints().tcpNoDelay());
@@ -235,6 +235,7 @@ public:
     void laserCloudInfoHandler(const lvi_sam::cloud_infoConstPtr& msgIn)
     {
         // extract time stamp
+        //提取当前帧时间戳
         timeLaserInfoStamp = msgIn->header.stamp;
         timeLaserInfoCur = msgIn->header.stamp.toSec();
 
@@ -247,6 +248,7 @@ public:
 
         // 0.15s更新一下map, 激光是10Hz的, 因此差不多两帧更新一次
         static double timeLastProcessing = -1;
+        //这里的判断用于控制处理频率（根据硬件性能决定）
         if (timeLaserInfoCur - timeLastProcessing >= mappingProcessInterval) {
 
             timeLastProcessing = timeLaserInfoCur;
@@ -813,35 +815,12 @@ public:
     }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    
-
-
     // 计算点云的先验位姿 (通过imu或者vins odom)
     void updateInitialGuess()
     {
         static Eigen::Affine3f lastImuTransformation; // 上一帧的imu位姿
 
-        // 第一帧点云, 直接使用imu初始化
+        // 第一帧点云, 直接使用imu进行初始化
         // system initialization
         if (cloudKeyPoses3D->points.empty())
         {
@@ -850,10 +829,10 @@ public:
             transformTobeMapped[1] = cloudInfo.imuPitchInit;
             transformTobeMapped[2] = cloudInfo.imuYawInit;
 
-            if (!useImuHeadingInitialization)
+            if (!useImuHeadingInitialization)//选择yaw角是否客观（没有GPS，则yaw置零）
                 transformTobeMapped[2] = 0;
 
-            // 保存下来, 给下一帧使用
+            // 保存下来, 给下一帧使用，平移置零了
             lastImuTransformation = pcl::getTransformation(0, 0, 0, cloudInfo.imuRollInit, cloudInfo.imuPitchInit, cloudInfo.imuYawInit); // save imu before return;
             return;
         }
@@ -865,7 +844,7 @@ public:
         if (cloudInfo.odomAvailable == true && cloudInfo.odomResetId == odomResetId)
         {
             // ROS_INFO("Using VINS initial guess");
-            if (lastVinsTransAvailable == false)
+            if (lastVinsTransAvailable == false)//是否第一次收到预积分节点的里程计
             {
                 // vins重新启动了, 保存vins重启后的第一帧odom
                 // ROS_INFO("Initializing VINS initial guess");
@@ -875,12 +854,15 @@ public:
             } else {
                 // 2.通过vins odom计算点云的先验位姿
                 // ROS_INFO("Obtaining VINS incremental guess");
+                // 将提供的初值转成Eigen格式保存下来
                 Eigen::Affine3f transBack = pcl::getTransformation(cloudInfo.odomX,    cloudInfo.odomY,     cloudInfo.odomZ, 
                                                                    cloudInfo.odomRoll, cloudInfo.odomPitch, cloudInfo.odomYaw);
+                //上一帧和当前帧lidar通过VINS得到的位姿增量
                 Eigen::Affine3f transIncre = lastVinsTransformation.inverse() * transBack;
-
+                //将增量加到上一帧最佳位姿上，就是当前帧的先验估计位姿
                 Eigen::Affine3f transTobe = trans2Affine3f(transformTobeMapped);
                 Eigen::Affine3f transFinal = transTobe * transIncre;
+                //转成平移向量和欧拉角
                 pcl::getTranslationAndEulerAngles(transFinal, transformTobeMapped[3], transformTobeMapped[4], transformTobeMapped[5], 
                                                               transformTobeMapped[0], transformTobeMapped[1], transformTobeMapped[2]);
 
@@ -928,17 +910,20 @@ public:
 
         // 1.extract all the nearby key poses and downsample them
         kdtreeSurroundingKeyPoses->setInputCloud(cloudKeyPoses3D); // create kd-tree
+        //根据最后一个关键帧位置，在一定距离内搜索关键帧
         kdtreeSurroundingKeyPoses->radiusSearch(cloudKeyPoses3D->back(), (double)surroundingKeyframeSearchRadius, pointSearchInd, pointSearchSqDis);
+        //将附近关键帧点云存入surroundingKeyPoses中
         for (int i = 0; i < (int)pointSearchInd.size(); ++i)
         {
             int id = pointSearchInd[i];
             surroundingKeyPoses->push_back(cloudKeyPoses3D->points[id]);
         }
-
+        //避免关键帧过多，做一个下采样
         downSizeFilterSurroundingKeyPoses.setInputCloud(surroundingKeyPoses);
         downSizeFilterSurroundingKeyPoses.filter(*surroundingKeyPosesDS);
 
         // 2.also extract some latest key frames in case the robot rotates in one position
+        //也提取时间上较近的关键帧
         int numPoses = cloudKeyPoses3D->size();
         for (int i = numPoses-1; i >= 0; --i)
         {
@@ -1419,7 +1404,7 @@ public:
     {
         if (cloudInfo.imuAvailable == true)
         {
-            if (std::abs(cloudInfo.imuPitchInit) < 1.4) // 俯仰角小于1.4
+            if (std::abs(cloudInfo.imuPitchInit) < 1.4) //TODO俯仰角小于1.4
             {
                 double imuWeight = 0.01;
                 tf::Quaternion imuQuaternion;
