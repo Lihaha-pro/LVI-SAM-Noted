@@ -363,7 +363,7 @@ int main(int argc, char **argv)
     
     // subscriber to image and lidar
     ros::Subscriber sub_img   = n.subscribe(IMAGE_TOPIC,       5,    img_callback);
-    ros::Subscriber sub_lidar = n.subscribe(POINT_CLOUD_TOPIC, 5,    lidar_callback);
+    ros::Subscriber sub_lidar = n.subscribe(POINT_CLOUD_TOPIC, 5,    lidar_callback);//获得去畸变点云，进入回调函数
     if (!USE_LIDAR)
         sub_lidar.shutdown();
 

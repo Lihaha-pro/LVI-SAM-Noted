@@ -335,7 +335,7 @@ void FeatureManager::removeBackShiftDepth(Eigen::Matrix3d marg_R, Eigen::Vector3
                 if (it->feature_per_frame[0].depth > 0)
                 {
                     it->estimated_depth = it->feature_per_frame[0].depth;
-                    it->lidar_depth_flag = true;
+                    it->lidar_depth_flag = true;//通过雷达得到的视觉特征深度在这里进行了标记
                 } 
                 // calculated depth in the current frame
                 else if (dep_j > 0)

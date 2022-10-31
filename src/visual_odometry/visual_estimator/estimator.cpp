@@ -862,7 +862,7 @@ void Estimator::optimization()
                 problem.AddResidualBlock(f_td, loss_function, para_Pose[imu_i], para_Pose[imu_j], para_Ex_Pose[0], para_Feature[feature_index], para_Td[0]);
                 
                 // depth is obtained from lidar, skip optimizing it
-                if (it_per_id.lidar_depth_flag == true)
+                if (it_per_id.lidar_depth_flag == true)//跳过已经三角化的特征点
                     problem.SetParameterBlockConstant(para_Feature[feature_index]);
             }
             else

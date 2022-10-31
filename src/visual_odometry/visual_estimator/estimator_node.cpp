@@ -246,7 +246,7 @@ void process()
         for (auto &measurement : measurements)
         {
             // 当前图像帧
-            auto img_msg = measurement.second;
+            auto img_msg = measurement.second;//!!!!
 
             // 2.IMU pre-integration
             double dx = 0, dy = 0, dz = 0, rx = 0, ry = 0, rz = 0;
@@ -319,7 +319,7 @@ void process()
                 // 特征点速度(归一化平面)
                 double velocity_x = img_msg->channels[3].values[i];
                 double velocity_y = img_msg->channels[4].values[i];
-                // 深度(通过激光点云得到的)
+                // 深度(通过激光点云得到的)///深度在这里
                 double depth = img_msg->channels[5].values[i];
 
                 ROS_ASSERT(z == 1);

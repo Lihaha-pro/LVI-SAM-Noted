@@ -76,7 +76,7 @@ public:
     ros::Subscriber subLoopInfo; // vins闭环信息 (时间戳)
 
     std::deque<nav_msgs::Odometry> gpsQueue; // gps odom
-    lvi_sam::cloud_info cloudInfo; // 原始点云
+    lvi_sam::cloud_info cloudInfo; //提取了特征的原始点云
 
     // 所有keyframs
     vector<pcl::PointCloud<PointType>::Ptr> cornerCloudKeyFrames; // 关键帧的corner特征 (lidar系, 采样后的)
@@ -163,7 +163,7 @@ public:
         // 发布一些odometry之类的
         pubKeyPoses           = nh.advertise<sensor_msgs::PointCloud2>(PROJECT_NAME + "/lidar/mapping/trajectory", 1); // 所有关键帧的位姿(优化后的)
         pubLaserCloudSurround = nh.advertise<sensor_msgs::PointCloud2>(PROJECT_NAME + "/lidar/mapping/map_global", 1); // 全局地图点云(1000m以内)
-        pubOdomAftMappedROS   = nh.advertise<nav_msgs::Odometry>      (PROJECT_NAME + "/lidar/mapping/odometry", 1);   // 激光里程计(优化以后的, 一帧一帧的发)
+        pubOdomAftMappedROS   = nh.advertise<nav_msgs::Odometry>      (PROJECT_NAME + "/lidar/mapping/odometry", 1);   // 激光里程计(优化以后的, 一帧一帧的发，送到预积分节点imuPreintegration)
         pubPath               = nh.advertise<nav_msgs::Path>          (PROJECT_NAME + "/lidar/mapping/path", 1);       // 整条里程计轨迹(优化后的)
         //订阅特征点 GPS 回环信息
         subLaserCloudInfo     = nh.subscribe<lvi_sam::cloud_info>     (PROJECT_NAME + "/lidar/feature/cloud_info", 5, &mapOptimization::laserCloudInfoHandler, this, ros::TransportHints().tcpNoDelay());
@@ -815,7 +815,14 @@ public:
     }
 
 
-    // 计算点云的先验位姿 (通过imu或者vins odom)
+    // 
+
+    /**
+     * @brief 计算点云的先验位姿 (通过imu或者vins odom)
+     * 先求得相邻vins或imu位姿的增量，叠加到上一帧的位姿上，就得到了当前帧的初始位姿估计
+     * 优先使用vins进行初始位姿估计，若vins失效则使用imu
+     * 
+     */
     void updateInitialGuess()
     {
         static Eigen::Affine3f lastImuTransformation; // 上一帧的imu位姿
@@ -854,7 +861,7 @@ public:
             } else {
                 // 2.通过vins odom计算点云的先验位姿
                 // ROS_INFO("Obtaining VINS incremental guess");
-                // 将提供的初值转成Eigen格式保存下来
+                // 将提供的初值转成Eigen格式保存下来 //TODO cloud_info频率是怎么样的？
                 Eigen::Affine3f transBack = pcl::getTransformation(cloudInfo.odomX,    cloudInfo.odomY,     cloudInfo.odomZ, 
                                                                    cloudInfo.odomRoll, cloudInfo.odomPitch, cloudInfo.odomYaw);
                 //上一帧和当前帧lidar通过VINS得到的位姿增量
@@ -871,7 +878,7 @@ public:
                                                                 cloudInfo.odomRoll, cloudInfo.odomPitch, cloudInfo.odomYaw);
 
                 lastImuTransformation = pcl::getTransformation(0, 0, 0, cloudInfo.imuRollInit, cloudInfo.imuPitchInit, cloudInfo.imuYawInit); // save imu before return;
-                return;
+                return;//优先使用vins进行初始位姿估计
             }
         } else {
             // vins跟丢了, 准备重启
@@ -1360,7 +1367,12 @@ public:
         return false; // keep optimizing
     }
 
-    // scan to map 匹配优化
+    // 
+
+    /**
+     * @brief scan to map 匹配优化 最终结果保存在transformTobeMapped中
+     * 
+     */
     void scan2MapOptimization()
     {
         if (cloudKeyPoses3D->points.empty())
@@ -1602,7 +1614,7 @@ public:
         // 2.gps factor 添加gps因子
         // addGPSFactor();
 
-        // 3.loop factor 添加loop因子
+        // 3.loop factor 添加loop因子 回环检测在另一个回调函数进行
         addLoopFactor();
 
         // 4.update iSAM 因子图优化 (同时会将上述odom gps loop因子添加到因子图中)

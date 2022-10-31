@@ -4,7 +4,8 @@ PROJECT_NAME: "lvi_sam"
 lvi_sam:
 
   # Topics
-  pointCloudTopic: "/points_raw"               # Point cloud data
+  pointCloudTopic: "/points_raw"               # Point cloud data /points_raw
+  # pointCloudTopic: "/velodyne_points"               # Point cloud data /points_raw
   imuTopic: "/imu_raw"                         # IMU data
 
   # Heading
@@ -31,6 +32,8 @@ lvi_sam:
   extrinsicTrans: [0.0, 0.0, 0.0]
   extrinsicRot: [-1, 0, 0, 0, 1, 0, 0, 0, -1]
   extrinsicRPY: [0, 1, 0, -1, 0, 0, 0, 0, 1]
+  # extrinsicRot: [1, 0, 0, 0, 1, 0, 0, 0, 1]
+  # extrinsicRPY: [1, 0, 0, 0, 1, 0, 0, 0, 1]
 
   # LOAM feature threshold
   edgeThreshold: 1.0          # 提取corner特征的曲率阈值

@@ -71,15 +71,15 @@ public:
 
     ros::NodeHandle n;
     // publisher for visualization
-    ros::Publisher pub_depth_feature;
+    ros::Publisher pub_depth_feature;//发布找到深度的特征点
     ros::Publisher pub_depth_image;
-    ros::Publisher pub_depth_cloud;
+    ros::Publisher pub_depth_cloud;//发布深度点云
 
     tf::TransformListener listener;
     tf::StampedTransform transform;
 
     const int num_bins = 360;
-    vector<vector<PointType>> pointsArray;
+    vector<vector<PointType>> pointsArray;//二维保存深度点云
 
     DepthRegister(ros::NodeHandle n_in):
     n(n_in)
@@ -93,7 +93,17 @@ public:
         for (int i = 0; i < num_bins; ++i)
             pointsArray[i].resize(num_bins);
     }
-
+    //视觉特征深度估计
+    /**
+     * @brief Get the depth object
+     * 
+     * @param stamp_cur 时间戳
+     * @param imageCur Mat类型的图片
+     * @param depthCloud 点云
+     * @param camera_model //TODO 这是啥
+     * @param features_2d //归一化特征点坐标
+     * @return sensor_msgs::ChannelFloat32 
+     */
     sensor_msgs::ChannelFloat32 get_depth(const ros::Time& stamp_cur, const cv::Mat& imageCur, 
                                           const pcl::PointCloud<PointType>::Ptr& depthCloud,
                                           const camodocal::CameraPtr& camera_model ,
@@ -109,6 +119,7 @@ public:
             return depth_of_point;
 
         // 0.3 look up transform at current image time
+        // 获得从世界系到body系的位姿变换
         try{
             listener.waitForTransform("vins_world", "vins_body_ros", stamp_cur, ros::Duration(0.01));
             listener.lookupTransform("vins_world", "vins_body_ros", stamp_cur, transform);
@@ -124,6 +135,7 @@ public:
         zCur = transform.getOrigin().z();
         tf::Matrix3x3 m(transform.getRotation());
         m.getRPY(rollCur, pitchCur, yawCur);
+        //Eigen格式的Twb
         Eigen::Affine3f transNow = pcl::getTransformation(xCur, yCur, zCur, rollCur, pitchCur, yawCur);
 
         // 0.4 transform cloud from global frame to camera frame
@@ -131,12 +143,13 @@ public:
         pcl::transformPointCloud(*depthCloud, *depth_cloud_local, transNow.inverse());
 
         // 0.5 project undistorted normalized (z) 2d features onto a unit sphere
+        //保存投影到单位球的视觉特征
         pcl::PointCloud<PointType>::Ptr features_3d_sphere(new pcl::PointCloud<PointType>());
         for (int i = 0; i < (int)features_2d.size(); ++i)
         {
             // normalize 2d feature to a unit sphere
             Eigen::Vector3f feature_cur(features_2d[i].x, features_2d[i].y, features_2d[i].z); // z always equal to 1
-            feature_cur.normalize();
+            feature_cur.normalize();//归一化向量
             // convert to ROS standard
             PointType p;
             p.x =  feature_cur(2);
@@ -147,15 +160,16 @@ public:
         }
 
         // 3. project depth cloud on a range image, filter points satcked in the same region
+        //在距离图像上投影深度点云，并过滤密集的点
         float bin_res = 180.0 / (float)num_bins; // currently only cover the space in front of lidar (-90 ~ 90)
-        cv::Mat rangeImage = cv::Mat(num_bins, num_bins, CV_32F, cv::Scalar::all(FLT_MAX));
+        cv::Mat rangeImage = cv::Mat(num_bins, num_bins, CV_32F, cv::Scalar::all(FLT_MAX));//360*360的Mat
 
         for (int i = 0; i < (int)depth_cloud_local->size(); ++i)
         {
             PointType p = depth_cloud_local->points[i];
             // filter points not in camera view
             if (p.x < 0 || abs(p.y / p.x) > 10 || abs(p.z / p.x) > 10)
-                continue;
+                continue;//这里筛选的条件要结合实际的安装角度，这里筛选了激光雷达前边的点
             // find row id in range image
             float row_angle = atan2(p.z, sqrt(p.x * p.x + p.y * p.y)) * 180.0 / M_PI + 90.0; // degrees, bottom -> up, 0 -> 360
             int row_id = round(row_angle / bin_res);
@@ -165,7 +179,7 @@ public:
             // id may be out of boundary
             if (row_id < 0 || row_id >= num_bins || col_id < 0 || col_id >= num_bins)
                 continue;
-            // only keep points that's closer
+            // only keep points that's closer 保留更近的点云
             float dist = pointDistance(p);
             if (dist < rangeImage.at<float>(row_id, col_id))
             {
@@ -184,10 +198,12 @@ public:
                     depth_cloud_local_filter2->push_back(pointsArray[i][j]);
             }
         }
-        *depth_cloud_local = *depth_cloud_local_filter2;
+        *depth_cloud_local = *depth_cloud_local_filter2;//保存实际有效的点云
+        //发布有效的深度点云
         publishCloud(&pub_depth_cloud, depth_cloud_local, stamp_cur, "vins_body_ros");
 
         // 5. project depth cloud onto a unit sphere
+        //保存点云投影到单位球
         pcl::PointCloud<PointType>::Ptr depth_cloud_unit_sphere(new pcl::PointCloud<PointType>());
         for (int i = 0; i < (int)depth_cloud_local->size(); ++i)
         {
@@ -207,6 +223,7 @@ public:
         kdtree->setInputCloud(depth_cloud_unit_sphere);
 
         // 7. find the feature depth using kd-tree
+        //基于kd树找到视觉特征的深度
         vector<int> pointSearchInd;
         vector<float> pointSearchSqDis;
         float dist_sq_threshold = pow(sin(bin_res / 180.0 * M_PI) * 5.0, 2);
@@ -259,6 +276,7 @@ public:
         }
 
         // visualize features in cartesian 3d space (including the feature without depth (default 1))
+        //发布深度匹配之后的视觉特征点
         publishCloud(&pub_depth_feature, features_3d_sphere, stamp_cur, "vins_body_ros");
         
         // update depth value for return
