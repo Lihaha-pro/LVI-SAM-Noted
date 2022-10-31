@@ -289,10 +289,10 @@ void lidar_callback(const sensor_msgs::PointCloud2ConstPtr& laser_msg)
 
     // TODO: transform to IMU body frame
     // 4. offset T_lidar -> T_camera 点云坐标变换(lidar to camera)
-    pcl::PointCloud<PointType>::Ptr laser_cloud_offset(new pcl::PointCloud<PointType>());
-    Eigen::Affine3f transOffset = pcl::getTransformation(L_C_TX, L_C_TY, L_C_TZ, L_C_RX, L_C_RY, L_C_RZ);
-    pcl::transformPointCloud(*laser_cloud_in, *laser_cloud_offset, transOffset);
-    *laser_cloud_in = *laser_cloud_offset;
+    // pcl::PointCloud<PointType>::Ptr laser_cloud_offset(new pcl::PointCloud<PointType>());
+    // Eigen::Affine3f transOffset = pcl::getTransformation(L_C_TX, L_C_TY, L_C_TZ, L_C_RX, L_C_RY, L_C_RZ);
+    // pcl::transformPointCloud(*laser_cloud_in, *laser_cloud_offset, transOffset);
+    // *laser_cloud_in = *laser_cloud_offset;
 
     // 5. transform new cloud into global odom frame 点云坐标变换(camera to world)
     pcl::PointCloud<PointType>::Ptr laser_cloud_global(new pcl::PointCloud<PointType>());
