@@ -76,7 +76,7 @@ public:
     ros::Subscriber subLoopInfo; // vins闭环信息 (时间戳)
 
     std::deque<nav_msgs::Odometry> gpsQueue; // gps odom
-    lvi_sam::cloud_info cloudInfo; //提取了特征的原始点云
+    lvi_sam::cloud_info cloudInfo; //提取了特征的原始点云，该文件对应的原始点云
 
     // 所有keyframs
     vector<pcl::PointCloud<PointType>::Ptr> cornerCloudKeyFrames; // 关键帧的corner特征 (lidar系, 采样后的)
@@ -1761,11 +1761,11 @@ public:
     {
         if (cloudKeyPoses3D->points.empty())
             return;
-        // 1.publish key poses 发布所有关键帧的位姿
+        // 1.publish key poses 发布所有关键帧的位姿 /lidar/mapping/trajectory
         publishCloud(&pubKeyPoses, cloudKeyPoses6D, timeLaserInfoStamp, "odom");
-        // 2.Publish surrounding key frames 发布localmap的surface点云
+        // 2.Publish surrounding key frames 发布localmap的surface点云 /lidar/mapping/map_local
         publishCloud(&pubRecentKeyFrames, laserCloudSurfFromMapDS, timeLaserInfoStamp, "odom");
-        // 3.publish registered key frame 发布当前帧点云(降采样后的特征点云)
+        // 3.publish registered key frame 发布当前帧点云(降采样后的特征点云) /lidar/mapping/cloud_registered（Rviz默认显示的点云）
         if (pubRecentKeyFrame.getNumSubscribers() != 0)
         {
             pcl::PointCloud<PointType>::Ptr cloudOut(new pcl::PointCloud<PointType>());
@@ -1774,7 +1774,7 @@ public:
             *cloudOut += *transformPointCloud(laserCloudSurfLastDS,    &thisPose6D);
             publishCloud(&pubRecentKeyFrame, cloudOut, timeLaserInfoStamp, "odom");
         }
-        // 4.publish registered high-res raw cloud 发布当前帧点云(原始点云cloud_deskewed)
+        // 4.publish registered high-res raw cloud 发布当前帧点云(原始点云cloud_deskewed) /lidar/mapping/cloud_registered_raw
         if (pubCloudRegisteredRaw.getNumSubscribers() != 0)
         {
             pcl::PointCloud<PointType>::Ptr cloudOut(new pcl::PointCloud<PointType>());
@@ -1783,7 +1783,7 @@ public:
             *cloudOut = *transformPointCloud(cloudOut,  &thisPose6D);
             publishCloud(&pubCloudRegisteredRaw, cloudOut, timeLaserInfoStamp, "odom");
         }
-        // 5.publish path 发布整条里程计轨迹globalPath
+        // 5.publish path 发布整条里程计轨迹globalPath  /lidar/mapping/path
         if (pubPath.getNumSubscribers() != 0)
         {
             globalPath.header.stamp = timeLaserInfoStamp;
