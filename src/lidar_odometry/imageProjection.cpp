@@ -187,8 +187,7 @@ public:
     // sensor_msgs::PointCloud2-->pcl::PointCloud<PointXYZIRT> (laserCloudIn)
     bool cachePointCloud(const sensor_msgs::PointCloud2ConstPtr& laserCloudMsg)
     {
-        printf("current frame timestamp: %f.\n", laserCloudMsg->header.stamp.toSec());
-
+        // printf("current frame timestamp: %f.\n", laserCloudMsg->header.stamp.toSec());
         // cache point cloud
         cloudQueue.push_back(*laserCloudMsg);
         //确保队列里大于两帧点云数据
