@@ -49,8 +49,9 @@ public:
     void keyFramePosesHandler(const nav_msgs::Odometry::ConstPtr& msgIn) {//注意，回调函数要加ConstPtr
         //提取当前帧时间戳
         timeCurKFStamp = msgIn->header.stamp;
-        timeCurKF = msgIn->header.stamp.toSec();
-        
+        // timeCurKF = msgIn->header.stamp.toSec();
+        timeCurKF = ROS_TIME(msgIn);//取出时间戳
+        printf("current KeyFrame timestamp: %f.\n", timeCurKF);
 
     }
 };

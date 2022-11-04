@@ -1717,7 +1717,7 @@ public:
     }
 
     // 发布 lidar里程计 以及 tf:odom_to_lidar
-    void ·publishOdometry()
+    void publishOdometry()
     {
         // 1.Publish odometry for ROS 发布当前帧的位姿(优化后的)
         nav_msgs::Odometry laserOdometryROS;
