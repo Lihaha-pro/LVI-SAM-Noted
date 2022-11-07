@@ -70,6 +70,7 @@ public:
     ros::Publisher pubRecentKeyFrame;     // 发布 当前帧的特征点云(降采样后的特征点云)
     ros::Publisher pubCloudRegisteredRaw; // 发布 当前帧的原始点云cloud_deskewed
     ros::Publisher pubLoopConstraintEdge; // 发布 所有闭环约束
+    
 
     ros::Subscriber subLaserCloudInfo;
     ros::Subscriber subGPS;      // gps odom
@@ -152,6 +153,9 @@ public:
     vector<pair<int, int>> loopIndexQueue; // <index1, index2>
     vector<gtsam::Pose3> loopPoseQueue;    // 相对pose
     vector<gtsam::noiseModel::Diagonal::shared_ptr> loopNoiseQueue;
+    //李琳昊定义的
+    lvi_sam::cloud_info KF_Info;
+    ros::Publisher pubKeyFrameInfo;        // 发布 当前关键帧信息
 
     mapOptimization()
     {
@@ -179,6 +183,9 @@ public:
         pubRecentKeyFrames    = nh.advertise<sensor_msgs::PointCloud2>(PROJECT_NAME + "/lidar/mapping/map_local", 1);            // localmap的特征点云
         pubRecentKeyFrame     = nh.advertise<sensor_msgs::PointCloud2>(PROJECT_NAME + "/lidar/mapping/cloud_registered", 1);     // 当前帧的特征点云(降采样后的特征点云)
         pubCloudRegisteredRaw = nh.advertise<sensor_msgs::PointCloud2>(PROJECT_NAME + "/lidar/mapping/cloud_registered_raw", 1); // 当前帧的原始点云cloud_deskewed
+
+        // KeyFrame
+        pubKeyFrameInfo       = nh.advertise<lvi_sam::cloud_info>(PROJECT_NAME + "/lidar/mapping/KeyFrameInfo", 1);         // 关键帧相关信息
 
         downSizeFilterCorner.setLeafSize(mappingCornerLeafSize, mappingCornerLeafSize, mappingCornerLeafSize);
         downSizeFilterSurf.setLeafSize(mappingSurfLeafSize, mappingSurfLeafSize, mappingSurfLeafSize);
@@ -238,6 +245,7 @@ public:
         //提取当前帧时间戳
         timeLaserInfoStamp = msgIn->header.stamp;
         timeLaserInfoCur = msgIn->header.stamp.toSec();
+        KF_Info.header = msgIn->header;//更新关键帧时间戳
 
         // extract info and feature cloud
         cloudInfo = *msgIn;
@@ -1676,6 +1684,23 @@ public:
 
         // 8.save path for visualization
         updatePath(thisPose6D);
+
+        //llh:发布关键帧信息
+        /// 关键帧位姿
+        KF_Info.odomX = thisPose6D.x;
+        KF_Info.odomY = thisPose6D.y;
+        KF_Info.odomZ = thisPose6D.z;
+        KF_Info.odomRoll = thisPose6D.roll;
+        KF_Info.odomPitch = thisPose6D.pitch;
+        KF_Info.odomYaw = thisPose6D.yaw;
+        /// 保存点云
+        sensor_msgs::PointCloud2 tempCloud;
+        pcl::toROSMsg(*thisCornerKeyFrame, tempCloud);
+        KF_Info.cloud_corner = tempCloud;
+        pcl::toROSMsg(*thisSurfKeyFrame, tempCloud);
+        KF_Info.cloud_surface = tempCloud;
+        pubKeyFrameInfo.publish(KF_Info);
+
     }
 
     // 闭环以后, 需要更新所有关键帧的位姿
