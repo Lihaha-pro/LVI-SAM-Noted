@@ -97,7 +97,7 @@ void img_callback(const sensor_msgs::ImageConstPtr &img_msg)
     for (int i = 0; i < NUM_OF_CAM; i++) // 分别对每个相机处理
     {
         ROS_DEBUG("processing camera %d", i);
-        if (i != 1 || !STEREO_TRACK) // 读取第一张图片的数据 (单目, 双目)
+        if (i != 1 || !STEREO_TRACK) // 读取第一张图片的数据 (单目, 双目)，并完成光流跟踪
             trackerData[i].readImage(ptr->image.rowRange(ROW * i, ROW * (i + 1)), cur_img_time); // 读取图像数据 (光流跟踪, 提取特征)
         else // 读取第二张图片的数据 (双目)
         {
@@ -328,7 +328,7 @@ void lidar_callback(const sensor_msgs::PointCloud2ConstPtr& laser_msg)
     downSizeFilter.filter(*depthCloudDS);
     *depthCloud = *depthCloudDS;
 }
-
+//节点lvi_sam_visual_feature
 int main(int argc, char **argv)
 {
     // initialize ROS node

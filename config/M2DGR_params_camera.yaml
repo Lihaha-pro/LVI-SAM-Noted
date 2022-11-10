@@ -1,6 +1,6 @@
 %YAML:1.0
 
-# Project
+# Project 不知道为什么imu内参用的是Xsens的，是GNSS不知道怎么来的
 project_name: "lvi_sam"
 
 #common parameters

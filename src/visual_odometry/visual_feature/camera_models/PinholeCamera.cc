@@ -174,7 +174,7 @@ PinholeCamera::Parameters::readFromYamlFile(const std::string& filename)
     m_p2 = static_cast<double>(n["p2"]);
 
     n = fs["projection_parameters"];
-    m_fx = static_cast<double>(n["fx"]);
+    m_fx = static_cast<double>(n["fx"]);//llh：相机内参
     m_fy = static_cast<double>(n["fy"]);
     m_cx = static_cast<double>(n["cx"]);
     m_cy = static_cast<double>(n["cy"]);

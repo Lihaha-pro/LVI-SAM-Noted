@@ -201,11 +201,19 @@ void pubOdometry(const Estimator &estimator, const std_msgs::Header &header)
 // 滑动窗口内的关键帧位姿
 void pubKeyPoses(const Estimator &estimator, const std_msgs::Header &header)
 {
+    // std::cout << "进入发布函数" << std::endl;
     if (pub_key_poses.getNumSubscribers() == 0)
+    {
+        // std::cout << "没有订阅者" << std::endl;
         return;
+    }
+        
 
-    if (estimator.key_poses.size() == 0)
+    if (estimator.key_poses.size() == 0) {
+        // std::cout << "没有关键帧" << std::endl;
         return;
+    }
+        
     visualization_msgs::Marker key_poses;
     key_poses.header = header;
     key_poses.header.frame_id = "vins_world";
@@ -399,7 +407,7 @@ void pubTF(const Estimator &estimator, const std_msgs::Header &header)
     pub_extrinsic.publish(odometry);
 }
 
-// 发布关键帧位姿和特征点云, 用于闭环检测
+// 发布关键帧位姿和特征点云, 用于闭环检测【LLH：重要！】
 void pubKeyframe(const Estimator &estimator)
 {
     if (pub_keyframe_pose.getNumSubscribers() == 0 && pub_keyframe_point.getNumSubscribers() == 0)
