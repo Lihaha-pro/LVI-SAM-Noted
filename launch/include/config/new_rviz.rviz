@@ -11,7 +11,10 @@ Panels:
         - /Lidar Odometry1
         - /Loop Closure1
         - /PointCloud22
+<<<<<<< HEAD
         - /PointCloud23
+=======
+>>>>>>> 360f50ae8b6354d3b86ad61dc817d40ec471a89c
       Splitter Ratio: 0.45996275544166565
     Tree Height: 795
   - Class: rviz/Selection
