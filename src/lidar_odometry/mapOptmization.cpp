@@ -1695,9 +1695,13 @@ public:
         KF_Info.odomYaw = thisPose6D.yaw;
         /// 保存点云
         sensor_msgs::PointCloud2 tempCloud;
-        pcl::toROSMsg(*thisCornerKeyFrame, tempCloud);
+        pcl::PointCloud<PointType>::Ptr curCornerKeyFrame(new pcl::PointCloud<PointType>());
+        pcl::PointCloud<PointType>::Ptr curSurfKeyFrame(new pcl::PointCloud<PointType>());
+        pcl::copyPointCloud(*laserCloudCornerLast,  *curCornerKeyFrame);
+        pcl::copyPointCloud(*laserCloudSurfLast,    *curSurfKeyFrame);
+        pcl::toROSMsg(*curCornerKeyFrame, tempCloud);
         KF_Info.cloud_corner = tempCloud;
-        pcl::toROSMsg(*thisSurfKeyFrame, tempCloud);
+        pcl::toROSMsg(*curSurfKeyFrame, tempCloud);
         KF_Info.cloud_surface = tempCloud;
         pubKeyFrameInfo.publish(KF_Info);
 

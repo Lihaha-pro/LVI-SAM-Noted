@@ -267,26 +267,12 @@ public:
         m_image.lock();
         // 3.图像格式转换(ROS to OpenCV)
         cv_bridge::CvImageConstPtr ptr;
-        if (img_msg->encoding == "8UC1")
-        {
-            sensor_msgs::Image img;
-            img.header = img_msg->header;
-            img.height = img_msg->height;
-            img.width = img_msg->width;
-            img.is_bigendian = img_msg->is_bigendian;
-            img.step = img_msg->step;
-            img.data = img_msg->data;
-            img.encoding = "mono8";
-            ptr = cv_bridge::toCvCopy(img, sensor_msgs::image_encodings::MONO8);
-        }
-        else
-            ptr = cv_bridge::toCvCopy(img_msg, sensor_msgs::image_encodings::MONO8);
+        ptr = cv_bridge::toCvCopy(img_msg, sensor_msgs::image_encodings::RGB8);
 
         cv::Mat show_img = ptr->image; // 得到原始图片
+        
         images_buf.push({show_img, ROS_TIME(img_msg)}); //将图片放入队列中等待处理
-        // printf("当前图片时间戳为: %f.\n", ROS_TIME(img_msg));
         m_image.unlock();
-        // std::cout << "队列长度为" << images_buf.size() << endl;
     }
 
 
