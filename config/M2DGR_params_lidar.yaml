@@ -49,7 +49,7 @@ lvi_sam:
 
   # CPU Params
   numberOfCores: 4                              # number of cores for mapping optimization
-  mappingProcessInterval: 0.15                  # seconds, regulate mapping frequency
+  mappingProcessInterval: 0.01                  # seconds, regulate mapping frequency 之前是0.15
 
   # Surrounding map
   surroundingkeyframeAddingDistThreshold: 1.0   # meters, regulate keyframe adding threshold

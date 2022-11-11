@@ -167,6 +167,8 @@ public:
      */
     void cloudHandler(const sensor_msgs::PointCloud2ConstPtr& laserCloudMsg)
     {
+        // static int msgInConst = -1;
+        // cout << "原始点云数量为" << ++msgInConst << endl;
         // 1.缓存点云, 激光点云格式转化, 检查是否有ring和time通道
         if (!cachePointCloud(laserCloudMsg))
             return;

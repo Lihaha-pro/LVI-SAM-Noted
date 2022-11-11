@@ -241,11 +241,13 @@ public:
 
     void laserCloudInfoHandler(const lvi_sam::cloud_infoConstPtr& msgIn)
     {
+        // static int msgInConst = -1;
+        // cout << "原始点云数量为" << ++msgInConst << endl;
         // extract time stamp
         //提取当前帧时间戳
         timeLaserInfoStamp = msgIn->header.stamp;
         timeLaserInfoCur = msgIn->header.stamp.toSec();
-        //llh:更新时间戳和原始点云
+        //llh:更新时间戳和点云，之后求解完位姿再更新位姿
         KF_Info.header = msgIn->header;//更新关键帧时间戳
         KF_Info.cloud_deskewed = msgIn->cloud_deskewed; //更新去畸变的原始点云
 
@@ -1615,8 +1617,8 @@ public:
     void saveKeyFramesAndFactor()
     {
         // 是否将当前帧设为关键帧
-        if (saveFrame() == false)
-            return;
+        // if (saveFrame() == false)
+        //     return;
 
         // 1.odom factor 添加lidar odom因子
         addOdomFactor();

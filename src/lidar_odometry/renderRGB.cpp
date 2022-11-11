@@ -52,7 +52,7 @@ public:
     
     //构造函数
     RGB() {
-        subLaserCloudInfo = nh.subscribe<lvi_sam::cloud_info>(PROJECT_NAME + "/lidar/mapping/KeyFrameInfo", 5, &RGB::keyFrmaeInfoHandler, this, ros::TransportHints().tcpNoDelay());
+        subLaserCloudInfo = nh.subscribe<lvi_sam::cloud_info>(PROJECT_NAME + "/lidar/mapping/KeyFrameInfo", 5, &RGB::keyFrameInfoHandler, this, ros::TransportHints().tcpNoDelay());
         subImagePose = nh.subscribe(PROJECT_NAME + "/vins/odometry/keyframe_pose",  3, &RGB::imagePoseCallback, this, ros::TransportHints().tcpNoDelay());
         subImage     = nh.subscribe("/camera/color/image_raw", 30, &RGB::imageCallBack, this, ros::TransportHints().tcpNoDelay());
         
@@ -235,7 +235,7 @@ public:
             u = fx * curPoint.x / curPoint.z + cx;
             v = fy * curPoint.y / curPoint.z + cy;
             //判断像素坐标是否落在图像内
-            double scale = 0.1;//缩放系数，用于筛选小于原始图片大小的点
+            double scale = 0.01;//缩放系数，用于筛选小于原始图片大小的点
             if ((u < imgCols * scale + 1) || (u > imgCols * (1 - scale) - 1) ||
                 (v < imgRows * scale + 1) || (v > imgRows * (1 - scale) - 1)) {
                     continue;//跳过不在图片范围内的点
@@ -283,7 +283,7 @@ public:
      * @brief 点云关键帧相关信息回调函数
      * 
      */
-    void keyFrmaeInfoHandler(const lvi_sam::cloud_infoConstPtr& KF_Info) {
+    void keyFrameInfoHandler(const lvi_sam::cloud_infoConstPtr& KF_Info) {
         // Step 1：提取时间戳，位置姿态，特征点云
         static int iKeyFrame_ID = -1;
         iKeyFrame_ID++;//关键帧ID加一
@@ -350,7 +350,7 @@ public:
 
         // extract surrounding map
         // 1.并行计算, 分别提取每个keyframe的点云
-        #pragma omp parallel for num_threads(numberOfCores)
+        // #pragma omp parallel for num_threads(numberOfCores)
         for (int i = 0; i < (int)cloudToExtract->size(); ++i)
         {
             int thisKeyInd = (int)cloudToExtract->points[i].intensity; // intensity为keyframe的index
