@@ -166,7 +166,7 @@ void Estimator::processImage(const map<int, vector<pair<int, Eigen::Matrix<doubl
             }
         }
     }
-
+    // 初始化
     if (solver_flag == INITIAL)
     {
         // 4.初始化
