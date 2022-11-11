@@ -4,6 +4,7 @@ Panels:
     Name: Displays
     Property Tree Widget:
       Expanded:
+        - /Global Options1
         - /Links1
         - /Visual Feature1
         - /Visual Feature1/Image Feature1
@@ -201,7 +202,7 @@ Visualization Manager:
           Use Fixed Frame: true
           Use rainbow: false
           Value: false
-      Enabled: true
+      Enabled: false
       Name: Visual Odometry
     - Class: rviz/Group
       Displays:
@@ -458,7 +459,7 @@ Visualization Manager:
       Class: rviz/PointCloud2
       Color: 255; 255; 255
       Color Transformer: RGB8
-      Decay Time: 100
+      Decay Time: 500
       Enabled: true
       Invert Rainbow: false
       Max Color: 255; 255; 255
@@ -467,7 +468,7 @@ Visualization Manager:
       Position Transformer: XYZ
       Queue Size: 10
       Selectable: true
-      Size (Pixels): 3
+      Size (Pixels): 2
       Size (m): 0.10000000149011612
       Style: Points
       Topic: /lvi_sam/lidar/mapping/RGB_Cloud
@@ -490,7 +491,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 55.7268180847168
+      Distance: 93.64111328125
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -498,17 +499,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: -6.526486873626709
-        Y: -9.434162139892578
-        Z: -8.647972106933594
+        X: 12.894100189208984
+        Y: -3.300619125366211
+        Z: -13.141573905944824
       Focal Shape Fixed Size: false
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.3103981018066406
+      Pitch: 0.47039684653282166
       Target Frame: base_link
-      Yaw: 1.8485851287841797
+      Yaw: 1.953590989112854
     Saved: ~
 Window Geometry:
   Displays:

@@ -245,7 +245,9 @@ public:
         //提取当前帧时间戳
         timeLaserInfoStamp = msgIn->header.stamp;
         timeLaserInfoCur = msgIn->header.stamp.toSec();
+        //llh:更新时间戳和原始点云
         KF_Info.header = msgIn->header;//更新关键帧时间戳
+        KF_Info.cloud_deskewed = msgIn->cloud_deskewed; //更新去畸变的原始点云
 
         // extract info and feature cloud
         cloudInfo = *msgIn;

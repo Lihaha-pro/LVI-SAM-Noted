@@ -22,12 +22,14 @@ public:
     
 
     // 所有keyframs的点云
-    vector<pcl::PointCloud<PointType>::Ptr> cornerCloudKeyFrames; // body系下关键帧的corner特征  ///TODO:不确定body系还是lidar系，二者可能略有区别
-    vector<pcl::PointCloud<PointType>::Ptr> surfCloudKeyFrames;   // body系下关键帧的surface特征
-    
+    vector<pcl::PointCloud<PointType>::Ptr> cornerCloudKeyFrames;   // body系下关键帧的corner特征  ///TODO:不确定body系还是lidar系，二者可能略有区别
+    vector<pcl::PointCloud<PointType>::Ptr> surfCloudKeyFrames;     // body系下关键帧的surface特征
+    vector<pcl::PointCloud<PointType>::Ptr> deskewedCloudKeyFrames; // 去畸变的所有点云
+
     // localmap的特征点云(map系), 用来进行scan to map的匹配
     pcl::PointCloud<PointType>::Ptr laserCloudCornerFromMap;
     pcl::PointCloud<PointType>::Ptr laserCloudSurfFromMap;
+    pcl::PointCloud<PointType>::Ptr laserCloudDeskewedFromMap;
     pcl::PointCloud<PointType>::Ptr laserCloudCornerFromMapDS;
     pcl::PointCloud<PointType>::Ptr laserCloudSurfFromMapDS;
     pcl::PointCloud<PointType>::Ptr localPointCloud;    //局部地图点
@@ -64,6 +66,7 @@ public:
         kdtreeSurroundingKeyPoses.reset(new pcl::KdTreeFLANN<PointType>());
         laserCloudCornerFromMap.reset(new pcl::PointCloud<PointType>());
         laserCloudSurfFromMap.reset(new pcl::PointCloud<PointType>());
+        laserCloudDeskewedFromMap.reset(new pcl::PointCloud<PointType>());
         laserCloudCornerFromMapDS.reset(new pcl::PointCloud<PointType>());
         laserCloudSurfFromMapDS.reset(new pcl::PointCloud<PointType>());
         localPointCloud.reset(new pcl::PointCloud<PointType>());
@@ -316,9 +319,14 @@ public:
         tempCloud.reset(new pcl::PointCloud<PointType>());
         pcl::fromROSMsg(KF_Info->cloud_corner, *tempCloud);
         cornerCloudKeyFrames.push_back(tempCloud);
+
         tempCloud.reset(new pcl::PointCloud<PointType>());
         pcl::fromROSMsg(KF_Info->cloud_surface, *tempCloud);
         surfCloudKeyFrames.push_back(tempCloud);
+
+        tempCloud.reset(new pcl::PointCloud<PointType>());
+        pcl::fromROSMsg(KF_Info->cloud_deskewed, *tempCloud);
+        deskewedCloudKeyFrames.push_back(tempCloud);
         // cout << "一共有点云数量" << cloudKeyPoses3D->size() << endl;
         m_cloud.lock();
         kdtreeSurroundingKeyPoses->setInputCloud(cloudKeyPoses3D); // create kd-tree，为寻找邻近关键帧做准备
@@ -326,8 +334,8 @@ public:
         
     }
     /**
-     * @brief 通过提取到的keyframes, 来提取点云, 从而构造localmap
-     * 
+     * @brief 通过提取到的keyframes, 来提取点云, 从而构造局部地图
+     * ///最后结果保存在localPointCloud中
      */
      
     void extractCloud(pcl::PointCloud<PointType>::Ptr cloudToExtract)
@@ -335,9 +343,10 @@ public:
         // 用于并行计算, 为每个keyframe提取点云
         std::vector<pcl::PointCloud<PointType>> laserCloudCornerSurroundingVec;
         std::vector<pcl::PointCloud<PointType>> laserCloudSurfSurroundingVec;
-
+        std::vector<pcl::PointCloud<PointType>> laserCloudDeskewedSurroundingVec;
         laserCloudCornerSurroundingVec.resize(cloudToExtract->size());
         laserCloudSurfSurroundingVec.resize(cloudToExtract->size());
+        laserCloudDeskewedSurroundingVec.resize(cloudToExtract->size());
 
         // extract surrounding map
         // 1.并行计算, 分别提取每个keyframe的点云
@@ -349,6 +358,7 @@ public:
                 continue;
             laserCloudCornerSurroundingVec[i]  = *transformPointCloud(cornerCloudKeyFrames[thisKeyInd],  &cloudKeyPoses6D->points[thisKeyInd]);
             laserCloudSurfSurroundingVec[i]    = *transformPointCloud(surfCloudKeyFrames[thisKeyInd],    &cloudKeyPoses6D->points[thisKeyInd]);
+            laserCloudDeskewedSurroundingVec[i]= *transformPointCloud(deskewedCloudKeyFrames[thisKeyInd],&cloudKeyPoses6D->points[thisKeyInd]);
             
         }///至此局部特征点云存储进两个vector
 
@@ -359,6 +369,7 @@ public:
         {
             *laserCloudCornerFromMap += laserCloudCornerSurroundingVec[i];
             *laserCloudSurfFromMap   += laserCloudSurfSurroundingVec[i];
+            *laserCloudDeskewedFromMap += laserCloudDeskewedSurroundingVec[i];
         }
 
         // 3.分别对Corner和Surface特征进行采样
@@ -375,8 +386,9 @@ public:
         //LLH:选择一下是否使用下采样
         // *localPointCloud += *laserCloudCornerFromMapDS;
         // *localPointCloud += *laserCloudSurfFromMapDS;
-        *localPointCloud += *laserCloudCornerFromMap;
-        *localPointCloud += *laserCloudSurfFromMap;
+        // *localPointCloud += *laserCloudCornerFromMap;
+        // *localPointCloud += *laserCloudSurfFromMap;
+        *localPointCloud += *laserCloudDeskewedFromMap;
         // std::cout << "局部地图点数量为：" << localPointCloud->size() << std::endl;
         publishCloud(&pubLocalPointCloud, localPointCloud, timeCurKFStamp, "odom");
     }
