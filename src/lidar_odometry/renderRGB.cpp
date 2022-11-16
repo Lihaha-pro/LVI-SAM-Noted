@@ -46,6 +46,7 @@ public:
     std::mutex m_image;                 // 原始图片对应的锁
     std::mutex m_cloud;                 // 点云的锁
     double fx, fy, cx, cy;              // 相机内参
+    double k1, k2, p1, p2;              // 畸变参数
     int imgCols, imgRows;               // 图片尺寸
 
 
@@ -76,13 +77,28 @@ public:
         downSizeFilterSurroundingKeyPoses.setLeafSize(surroundingKeyframeDensity, surroundingKeyframeDensity, surroundingKeyframeDensity); // for surrounding key poses of scan-to-map optimization 2m
         downSizeFilterCorner.setLeafSize(mappingCornerLeafSize, mappingCornerLeafSize, mappingCornerLeafSize);
         downSizeFilterSurf.setLeafSize(mappingSurfLeafSize, mappingSurfLeafSize, mappingSurfLeafSize);
-        // 初始化相机内参，根据yaml文件手动输入
-        fx = 617.971050917033;
-        fy = 616.445131524790;
-        cx = 327.710279392468;
-        cy = 253.976983707814;
-        imgCols = 640;
-        imgRows = 480;
+        // 读取相机参数
+        ros::NodeHandle n;
+
+        std::string config_file;
+        n.getParam("vins_config_file", config_file);
+        cv::FileStorage fs(config_file, cv::FileStorage::READ);
+
+        imgCols = static_cast<int>(fs["image_width"]);
+        imgRows = static_cast<int>(fs["image_height"]);
+
+        cv::FileNode nn = fs["distortion_parameters"];
+        k1 = static_cast<double>(nn["k1"]);
+        k2 = static_cast<double>(nn["k2"]);
+        p1 = static_cast<double>(nn["p1"]);
+        p2 = static_cast<double>(nn["p2"]);
+
+        nn = fs["projection_parameters"];
+        fx = static_cast<double>(nn["fx"]);//llh：相机内参
+        fy = static_cast<double>(nn["fy"]);
+        cx = static_cast<double>(nn["cx"]);
+        cy = static_cast<double>(nn["cy"]);
+    
     }
     
     
@@ -100,11 +116,11 @@ public:
         keyImage_ID++;//关键帧ID加一
         std::cout << "🚀⭐⭐⭐🌟🌟🌟✨✨✨✨✨✨🌟🌟🌟⭐⭐⭐🔭" << std::endl;
         std::cout << "当前图片关键帧ID为:" << keyImage_ID << std::endl;
-        // Step 1：获得图片的时间戳、位置、姿态
+        // Step 1：获得图片的时间戳、位置、姿态，并将位置转换到世界系下
         timeImage = ROS_TIME(pose_msg);
         printf("当前图片姿态时间戳为: %f.\n", timeImage);
-        PointType imagePose3D;
-        PointTypePose imagePose6D;
+        PointType imagePose3D;      //相机位置
+        PointTypePose imagePose6D;  //相机位置+姿态
         imagePose6D.x = pose_msg->pose.pose.position.x;
         imagePose6D.y = pose_msg->pose.pose.position.y;
         imagePose6D.z = pose_msg->pose.pose.position.z;
@@ -153,7 +169,6 @@ public:
             curImg_Time = images_buf.front();
             images_buf.pop();
                 if (curImg_Time.second == timeImage) {
-                // cout << "找到匹配的图片🤩🤩🤩🤩🤩🤩" << endl;
                     break;
             }
         }
@@ -166,7 +181,7 @@ public:
         pcl::PointCloud<PointType>::Ptr surroundingKeyPosesDS(new pcl::PointCloud<PointType>());
         std::vector<int> pointSearchInd;     // keyframes的index
         std::vector<float> pointSearchSqDis; // keyframes的距离
-        /// 3.1 extract all the nearby key poses and downsample them
+        /// 在邻近范围搜寻关键帧基准点，并进行降采样
         kdtreeSurroundingKeyPoses->radiusSearch(imagePose3D, (double)10.0, pointSearchInd, pointSearchSqDis);//surroundingKeyframeSearchRadius
         //将附近关键帧点云存入surroundingKeyPoses中
         for (int i = 0; i < (int)pointSearchInd.size(); ++i)
@@ -177,18 +192,7 @@ public:
         //避免关键帧过多，做一个下采样 间距为2m
         downSizeFilterSurroundingKeyPoses.setInputCloud(surroundingKeyPoses);
         downSizeFilterSurroundingKeyPoses.filter(*surroundingKeyPosesDS);
-
-        /// 3.2 also extract some latest key frames in case the robot rotates in one position
-        // 也提取时间上较近的关键帧
-        // int numPoses = cloudKeyPoses3D->size();
-        // for (int i = numPoses - 1; i >= 0; --i)
-        // {
-        //     if (timeCurKF - cloudKeyPoses6D->points[i].time < 10.0) // 10s内的keyframes
-        //         surroundingKeyPosesDS->push_back(cloudKeyPoses3D->points[i]);
-        //     else
-        //         break;
-        // }
-        std::cout << "找到的局部关键帧个数为：" << surroundingKeyPosesDS->size() << std::endl;
+        // std::cout << "找到的局部关键帧个数为：" << surroundingKeyPosesDS->size() << std::endl;
         ///提取附近点云，结果保存在localPointCloud中
         extractCloud(surroundingKeyPosesDS);
         m_cloud.unlock();
@@ -212,11 +216,11 @@ public:
         tf::Matrix3x3 m1(transform.getRotation());
         m1.getRPY(rollCur, pitchCur, yawCur);
         //Eigen格式的Twb
-        transNow = pcl::getTransformation(xCur, yCur, zCur, rollCur, pitchCur, yawCur);
+        Eigen::Affine3f T_bo = pcl::getTransformation(xCur, yCur, zCur, rollCur, pitchCur, yawCur);
 
         // transform cloud from global frame to camera frame
-        pcl::PointCloud<PointType>::Ptr vinsLocalCloud(new pcl::PointCloud<PointType>());
-        pcl::transformPointCloud(*localPointCloud, *vinsLocalCloud, transNow);
+        pcl::PointCloud<PointType>::Ptr vinsLocalCloud(new pcl::PointCloud<PointType>());//存储body系下的局部地图点
+        pcl::transformPointCloud(*localPointCloud, *vinsLocalCloud, T_bo);
         ///至此将body系的点云保存在了vinsLocalCloud中，后面要同时处理odom系和body系的点云
         int pointSize = vinsLocalCloud->size();
         cloudInImage->clear();
@@ -225,7 +229,7 @@ public:
         for (int i = 0; i < pointSize; i++) {
             PointType tempCurPoint = (*vinsLocalCloud)[i];
             //做一下坐标轴的转换，从lidar的前左上转为image的右下前
-            PointType curPoint;
+            PointType curPoint; //当前激光点
             curPoint.x = -tempCurPoint.y;
             curPoint.y = -tempCurPoint.z;
             curPoint.z = tempCurPoint.x;
@@ -257,7 +261,7 @@ public:
 
         }
         //发布处在相机视野范围内的lidar点
-        publishCloud(&pubCloudInImage, cloudInImage, timeCurKFStamp, "odom");
+        // publishCloud(&pubCloudInImage, cloudInImage, timeCurKFStamp, "odom");
         //发布RGB渲染的点云
         publishCloud(&pubRGB_Cloud, RGB_Cloud, timeCurKFStamp, "odom");
 
@@ -428,13 +432,11 @@ int main(int argc, char** argv)
 
     ROS_INFO("\033[1;32m----> Lidar Map Optimization Started.\033[0m");
     
-    // std::thread loopDetectionthread(&mapOptimization::loopClosureThread, &MO);
-    // std::thread visualizeMapThread(&mapOptimization::visualizeGlobalMapThread, &MO);
 
     ros::spin();
 
-    // loopDetectionthread.join();
-    // visualizeMapThread.join();
 
     return 0;
 }
+
+
