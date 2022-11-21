@@ -11,14 +11,21 @@ lvi_sam:
   useImuHeadingInitialization: false          # if using GPS data, set to "true"
   
   # Export settings
-  savePCD: true                              # https://github.com/TixiaoShan/LIO-SAM/issues/3
-  savePCDDirectory: "/home/ljl/Documents/results/LIV_SAM_saveMap/"        # in your home folder, starts and ends with "/". Warning: the code deletes "LOAM" folder then recreates it. See "mapOptimization" for implementation
+  savePCD: false                              # https://github.com/TixiaoShan/LIO-SAM/issues/3
+  savePCDDirectory: "/Documents/results/LVI_SAM_saveMap/"        # in your home folder, starts and ends with "/". Warning: the code deletes "LOAM" folder then recreates it. See "mapOptimization" for implementation
 
   # Sensor Settings
   N_SCAN: 32                                  # number of lidar channel (i.e., 16, 32, 64, 128)
   Horizon_SCAN: 1800                          # lidar horizontal resolution (Velodyne:1800, Ouster:512,1024,2048)
   timeField: "time"                           # point timestamp field, Velodyne - "time", Ouster - "t"
   downsampleRate: 1                           # default: 1. Downsample your data if too many points. i.e., 16 = 64 / 4, 16 = 16 / 1 
+
+  #RGB渲染关键参数
+  historyCloudSize: 20                        #搜索局部地图时保留多少帧历史点云关键帧
+  frameVoxelSize: 0.02                        #一帧扫描降采样体素大小
+  RGBVoxelSize: 0.05                          #总的RGB点云输出将采用体素大小
+  maxDistRGB: 30                              #投影渲染时点的最大距离
+
 
   # IMU Settings
   imuAccNoise: 3.7686306102624571e-02

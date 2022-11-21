@@ -1,3 +1,4 @@
+
 #pragma once
 #include <atomic>
 #include <unordered_set>
@@ -7,6 +8,7 @@
 #include "lvi_sam/cloud_info.h"
 #include <queue>
 #include <utility>
+
 
 
 extern cv::RNG g_rng;
