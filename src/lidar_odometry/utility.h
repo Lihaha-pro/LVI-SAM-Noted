@@ -135,7 +135,7 @@ public:
     float surroundingkeyframeAddingDistThreshold; 
     float surroundingkeyframeAddingAngleThreshold; 
     float surroundingKeyframeDensity;
-    float surroundingKeyframeSearchRadius;
+    float surroundingKeyframeSearchRadius; // 50m
     
     // Loop closure
     bool loopClosureEnableFlag;

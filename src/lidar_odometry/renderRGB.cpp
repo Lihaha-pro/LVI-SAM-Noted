@@ -17,31 +17,21 @@ public:
     ros::Subscriber subLaserCloudInfo;  // 订阅关键帧Info
 
     ros::Publisher pubLocalPointCloud;  // 发布 localmap的surface点云
-    ros::Publisher pubCloudInImage;     // 发布 处在相机视野范围内的lidar点
-    ros::Publisher pubRGB_Cloud;        // 发布 RGB渲染之后的点云
+    ros::Publisher pubLocalCloudRGB;    // 发布 当前帧渲染后的RGB点云
+    ros::Publisher pubGlobalCloudRGB;   // 发布 全局RGB点云
     
 
     // 所有keyframs的点云
-    vector<pcl::PointCloud<PointType>::Ptr> cornerCloudKeyFrames;   // body系下关键帧的corner特征  ///TODO:不确定body系还是lidar系，二者可能略有区别
-    vector<pcl::PointCloud<PointType>::Ptr> surfCloudKeyFrames;     // body系下关键帧的surface特征
     vector<pcl::PointCloud<PointType>::Ptr> deskewedCloudKeyFrames; // 去畸变的所有点云
 
     // localmap的特征点云(map系), 用来进行scan to map的匹配
-    pcl::PointCloud<PointType>::Ptr laserCloudCornerFromMap;
-    pcl::PointCloud<PointType>::Ptr laserCloudSurfFromMap;
-    pcl::PointCloud<PointType>::Ptr laserCloudDeskewedFromMap;
-    pcl::PointCloud<PointType>::Ptr laserCloudCornerFromMapDS;
-    pcl::PointCloud<PointType>::Ptr laserCloudSurfFromMapDS;
+    pcl::PointCloud<PointType>::Ptr laserCloudDeskewedFromMap; // 用于获得局部地图点的中间变量（考虑到实际情况只保留了全部地图点）
     pcl::PointCloud<PointType>::Ptr localPointCloud;    //局部地图点
-    pcl::PointCloud<PointType>::Ptr cloudInImage;       //局部地图点
-    pcl::VoxelGrid<PointType> downSizeFilterCorner;     //降采样边缘点
-    pcl::VoxelGrid<PointType> downSizeFilterSurf;       //降采样平面点
-    pcl::VoxelGrid<pcl::PointXYZRGB> downSizeFilterMapRGB;     //RGB点云地图降采样
-    pcl::VoxelGrid<pcl::PointXYZRGB> downSizeFilterMapRGB2;     //RGB点云地图降采样2.0
 
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr outRGBCloud;      //保存全部的RGB点云用于输出
 
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr RGB_Cloud;        //RGB渲染之后的点云
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr localCloudRGB;           //局部RGB渲染之后的点云 
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr globalCloudRGB;          //保存全部的RGB点云用于输出
+    
     ///image相关
     ros::Subscriber subImagePose;   //订阅图片位姿
     ros::Subscriber subImage;       //订阅原始图片
@@ -52,7 +42,8 @@ public:
     double fx, fy, cx, cy;              // 相机内参
     double k1, k2, p1, p2;              // 畸变参数
     int imgCols, imgRows;               // 图片尺寸
-
+    ///全局地图
+    Hash_map_3d<long,RGB_pt_ptr> hashmap_3d_pts;
 
     
     //构造函数
@@ -62,28 +53,18 @@ public:
         subImage     = nh.subscribe("/camera/color/image_raw", 30, &RGB::imageCallBack, this, ros::TransportHints().tcpNoDelay());
         
         pubLocalPointCloud = nh.advertise<sensor_msgs::PointCloud2>(PROJECT_NAME + "/lidar/mapping/localPointCloud", 1);            // localmap的特征点云
-        pubCloudInImage = nh.advertise<sensor_msgs::PointCloud2>(PROJECT_NAME + "/lidar/mapping/cloudInImage", 1);   
-        pubRGB_Cloud = nh.advertise<sensor_msgs::PointCloud2>(PROJECT_NAME + "/lidar/mapping/RGB_Cloud", 1);         // localmap的特征点云
-        
+        pubLocalCloudRGB = nh.advertise<sensor_msgs::PointCloud2>(PROJECT_NAME + "/lidar/mapping/localCloudRGB", 1);   
+        pubGlobalCloudRGB = nh.advertise<sensor_msgs::PointCloud2>(PROJECT_NAME + "/lidar/mapping/globalCloudRGB", 1);         // localmap的特征点云
         /// 分配内存
         cloudKeyPoses3D.reset(new pcl::PointCloud<PointType>());
         cloudKeyPoses6D.reset(new pcl::PointCloud<PointTypePose>());
         kdtreeSurroundingKeyPoses.reset(new pcl::KdTreeFLANN<PointType>());
-        laserCloudCornerFromMap.reset(new pcl::PointCloud<PointType>());
-        laserCloudSurfFromMap.reset(new pcl::PointCloud<PointType>());
         laserCloudDeskewedFromMap.reset(new pcl::PointCloud<PointType>());
-        laserCloudCornerFromMapDS.reset(new pcl::PointCloud<PointType>());
-        laserCloudSurfFromMapDS.reset(new pcl::PointCloud<PointType>());
         localPointCloud.reset(new pcl::PointCloud<PointType>());
-        cloudInImage.reset(new pcl::PointCloud<PointType>());
-        RGB_Cloud.reset(new pcl::PointCloud<pcl::PointXYZRGB>());
-        outRGBCloud.reset(new pcl::PointCloud<pcl::PointXYZRGB>());
+        localCloudRGB.reset(new pcl::PointCloud<pcl::PointXYZRGB>());
+        globalCloudRGB.reset(new pcl::PointCloud<pcl::PointXYZRGB>());
         /// 初始化降采样尺寸 
         downSizeFilterSurroundingKeyPoses.setLeafSize(surroundingKeyframeDensity, surroundingKeyframeDensity, surroundingKeyframeDensity); // for surrounding key poses of scan-to-map optimization 2m
-        downSizeFilterCorner.setLeafSize(mappingCornerLeafSize, mappingCornerLeafSize, mappingCornerLeafSize);
-        downSizeFilterSurf.setLeafSize(mappingSurfLeafSize, mappingSurfLeafSize, mappingSurfLeafSize);
-        downSizeFilterMapRGB.setLeafSize(frameVoxelSize, frameVoxelSize, frameVoxelSize);
-        downSizeFilterMapRGB2.setLeafSize(RGBVoxelSize, RGBVoxelSize, RGBVoxelSize);
         // 读取相机参数
         ros::NodeHandle n;
 
@@ -153,7 +134,7 @@ public:
             ROS_ERROR("lidar no tf");
         }
 
-        double xCur, yCur, zCur, rollCur, pitchCur, yawCur;
+        double xCur, yCur, zCur, rollCur, pitchCur, yawCur;//用于求解位姿的中间变量
         xCur = transform.getOrigin().x();
         yCur = transform.getOrigin().y();
         zCur = transform.getOrigin().z();
@@ -183,7 +164,7 @@ public:
         m_image.unlock();
         // Step 3：在历史点云关键帧中，找到附近的关键帧
         m_cloud.lock();
-        // 附近的keyframes (最后一个keyframe附近, 50m)
+        // 附近的keyframes(50m)
         pcl::PointCloud<PointType>::Ptr surroundingKeyPoses(new pcl::PointCloud<PointType>());
         pcl::PointCloud<PointType>::Ptr surroundingKeyPosesDS(new pcl::PointCloud<PointType>());
         std::vector<int> pointSearchInd;     // keyframes的index
@@ -192,7 +173,6 @@ public:
         kdtreeSurroundingKeyPoses->radiusSearch(imagePose3D, (double)20.0, pointSearchInd, pointSearchSqDis);//surroundingKeyframeSearchRadius
         //将附近关键帧点云存入surroundingKeyPoses中
         for (int i = 0; i < (int)pointSearchInd.size(); ++i)
-        // for (int i = 0; i < 1; ++i)// TODO 这里强行改成了只用最近一帧点云关键帧
         {
             int id = pointSearchInd[i];
             surroundingKeyPoses->push_back(cloudKeyPoses3D->points[id]);
@@ -230,59 +210,74 @@ public:
         pcl::transformPointCloud(*localPointCloud, *vinsLocalCloud, T_bo);
         ///至此将body系的点云保存在了vinsLocalCloud中，后面要同时处理odom系和body系的点云
         int pointSize = vinsLocalCloud->size();
-        cloudInImage->clear();
-        RGB_Cloud->clear();
-        //遍历局部地图中的所有点云
-        for (int i = 0; i < (int)pointSize; i++) {
-            PointType tempCurPoint = (*vinsLocalCloud)[i];
-            //做一下坐标轴的转换，从lidar的前左上转为image的右下前
-            PointType curPoint; //当前激光点
-            curPoint.x = tempCurPoint.x;
-            curPoint.y = tempCurPoint.y;
-            curPoint.z = tempCurPoint.z;
-            if (curPoint.z < 0.01 || curPoint.z > maxDistRGB) continue;//跳过深度为负的点，以及距离大于10m的点
-            /// 从相机系点计算得到对应的像素坐标
-            double u, v;//投影的像素坐标
-            cameraProjective(curPoint, u, v);
-            // u = fx * curPoint.x / curPoint.z + cx;
-            // v = fy * curPoint.y / curPoint.z + cy;
-            
-            //判断像素坐标是否落在图像内
-            double scale = 0.05;//缩放系数，用于筛选小于原始图片大小的点
-            if ((u < imgCols * scale + 1) || (u > imgCols * (1 - scale) - 1) ||
-                (v < imgRows * scale + 1) || (v > imgRows * (1 - scale) - 1)) {
-                    continue;//跳过不在图片范围内的点
-                }
-            cloudInImage->push_back((*localPointCloud)[i]);
-            // cout << "该点像素坐标为\t" << u << "\t" << v << endl; 
-            /// 获取该点的RGB，将结果保存进RGB_Cloud中
+        localCloudRGB->clear();
+        
+        //遍历局部地图中的所有点云///llh！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！
+        for (int i = 0; i < pointSize; i++) {
+            PointType curPoint = (*vinsLocalCloud)[i];
+            double u, v;
+            bool res = project_3d_point_in_this_img(curPoint, u, v, 1.0);
+            if (res == false)
+            {
+                continue;
+            }
+            // 获取该点的RGB //TODO 这里的颜色还处于直接取值，后面考虑采用插值的方式提取颜色
             int r = rawImage.at<cv::Vec3b>(v, u)[2];
             int g = rawImage.at<cv::Vec3b>(v, u)[1];
             int b = rawImage.at<cv::Vec3b>(v, u)[0];
-            pcl::PointXYZRGB curPointRGB;
-            curPointRGB.x = (*localPointCloud)[i].x;
-            curPointRGB.y = (*localPointCloud)[i].y;
-            curPointRGB.z = (*localPointCloud)[i].z;
-            curPointRGB.r = r;
-            curPointRGB.g = g;
-            curPointRGB.b = b;
-            RGB_Cloud->push_back(curPointRGB);
+            Eigen::Vector3d rgb_color(r, g, b);
 
-        }
+            ///至此认为是有效的3D点，开始维护全局地图
+            // 4.1 获取全局体素索引
+            long voxel_x = std::round((*localPointCloud)[i].x / RGBVoxelSize);
+            long voxel_y = std::round((*localPointCloud)[i].y / RGBVoxelSize);
+            long voxel_z = std::round((*localPointCloud)[i].z / RGBVoxelSize);
+            
+            // 4.2 判断是否已经有体素，进行点云插入或更新
+            if (hashmap_3d_pts.if_exist(voxel_x, voxel_y, voxel_z) == 0) {//之前不存在，就插入新的点到体素
+                std::shared_ptr<RGB_pts> pt_rgb_temp = std::make_shared<RGB_pts>();
+                pt_rgb_temp->set_pos(Eigen::Matrix<double, 3, 1>((*localPointCloud)[i].x, (*localPointCloud)[i].y, (*localPointCloud)[i].z));
+                hashmap_3d_pts.insert(voxel_x, voxel_y, voxel_z, pt_rgb_temp);
+            }
+            //取出当前体素中的rgb点
+            std::shared_ptr<RGB_pts> pt_rgb = hashmap_3d_pts.m_map_3d_hash_map[voxel_x][voxel_y][voxel_z];
+            //更新体素内的rgb像素点
+            Eigen::Vector3d curPoint_locate(curPoint.x, curPoint.y, curPoint.z);
+            double pt_cam_norm = curPoint_locate.norm();//3D点到相机的距离
+            pt_rgb->update_rgb(rgb_color, pt_cam_norm, Eigen::Vector3d(15.0, 15.0, 15.0), timeImage);
+            
+            //保存局部RGB点云用于rviz显示
+            pcl::PointXYZRGB curPointRGB;
+            curPointRGB.x = pt_rgb->m_pos[0];
+            curPointRGB.y = pt_rgb->m_pos[1];
+            curPointRGB.z = pt_rgb->m_pos[2];
+            curPointRGB.r = pt_rgb->m_rgb[0];
+            curPointRGB.g = pt_rgb->m_rgb[1];
+            curPointRGB.b = pt_rgb->m_rgb[2];
+            localCloudRGB->push_back(curPointRGB);
+        }//至此完成对当前帧点云的遍历渲染
+
         // Step 5：发布相关点云
         //发布处在相机视野范围内的lidar点
-        // publishCloud(&pubCloudInImage, cloudInImage, timeCurKFStamp, "odom");
+        publishCloud(&pubLocalCloudRGB ,localCloudRGB, timeCurKFStamp, "odom");
         //发布RGB渲染的点云
-        publishCloud(&pubRGB_Cloud, RGB_Cloud, timeCurKFStamp, "odom");
-
-        //最后保存此次全部RGB点云
-        downSizeFilterMapRGB.setInputCloud(RGB_Cloud);
-        downSizeFilterMapRGB.filter(*RGB_Cloud);
-        for (int i = 0; i < (int)RGB_Cloud->size(); i++) {
-            outRGBCloud->push_back(RGB_Cloud->at(i));
+        globalCloudRGB->clear();
+        for (auto it1 : hashmap_3d_pts.m_map_3d_hash_map) {
+            for (auto it2 : it1.second) {
+                for (auto it3 : it2.second) {
+                    RGB_pt_ptr PointPtr = it3.second;
+                    pcl::PointXYZRGB curPointRGB;
+                    curPointRGB.x = PointPtr->m_pos[0];
+                    curPointRGB.y = PointPtr->m_pos[1];
+                    curPointRGB.z = PointPtr->m_pos[2];
+                    curPointRGB.r = PointPtr->m_rgb[0];
+                    curPointRGB.g = PointPtr->m_rgb[1];
+                    curPointRGB.b = PointPtr->m_rgb[2];
+                    globalCloudRGB->push_back(curPointRGB);
+                }
+            }
         }
-        downSizeFilterMapRGB2.setInputCloud(outRGBCloud);
-        downSizeFilterMapRGB2.filter(*outRGBCloud);
+        publishCloud(&pubGlobalCloudRGB, globalCloudRGB, timeCurKFStamp, "odom");
     }
     /**
      * @brief 原始图片回调函数，将原始图片和时间戳打包存入images_buf
@@ -339,15 +334,6 @@ public:
 
         //特征点云
         pcl::PointCloud<PointType>::Ptr tempCloud;
-        // tempCloud.reset(new pcl::PointCloud<PointType>());
-        // pcl::fromROSMsg(KF_Info->cloud_corner, *tempCloud);
-        // cornerCloudKeyFrames.push_back(tempCloud);
-
-        // tempCloud.reset(new pcl::PointCloud<PointType>());
-        // pcl::fromROSMsg(KF_Info->cloud_surface, *tempCloud);
-        // surfCloudKeyFrames.push_back(tempCloud);
-
-        
         tempCloud.reset(new pcl::PointCloud<PointType>());
         pcl::fromROSMsg(KF_Info->cloud_deskewed, *tempCloud);
         deskewedCloudKeyFrames.push_back(tempCloud);
@@ -369,11 +355,7 @@ public:
     void extractCloud(pcl::PointCloud<PointType>::Ptr cloudToExtract)
     {
         // 用于并行计算, 为每个keyframe提取点云
-        // std::vector<pcl::PointCloud<PointType>> laserCloudCornerSurroundingVec;
-        // std::vector<pcl::PointCloud<PointType>> laserCloudSurfSurroundingVec;
         std::vector<pcl::PointCloud<PointType>> laserCloudDeskewedSurroundingVec;
-        // laserCloudCornerSurroundingVec.resize(cloudToExtract->size());
-        // laserCloudSurfSurroundingVec.resize(cloudToExtract->size());
         laserCloudDeskewedSurroundingVec.resize(cloudToExtract->size());
 
         // extract surrounding map
@@ -384,47 +366,26 @@ public:
             int thisKeyInd = (int)cloudToExtract->points[i].intensity; // intensity为keyframe的index
             if (pointDistance(cloudKeyPoses3D->points[thisKeyInd], cloudKeyPoses3D->back()) > surroundingKeyframeSearchRadius)
                 continue;
-            // laserCloudCornerSurroundingVec[i]  = *transformPointCloud(cornerCloudKeyFrames[thisKeyInd],  &cloudKeyPoses6D->points[thisKeyInd]);
-            // laserCloudSurfSurroundingVec[i]    = *transformPointCloud(surfCloudKeyFrames[thisKeyInd],    &cloudKeyPoses6D->points[thisKeyInd]);
             if (deskewedCloudKeyFrames[thisKeyInd] != nullptr)
                 laserCloudDeskewedSurroundingVec[i]= *transformPointCloud(deskewedCloudKeyFrames[thisKeyInd],&cloudKeyPoses6D->points[thisKeyInd]);
             
         }///至此局部特征点云存储进两个vector
 
         // 2.fuse the map
-        // laserCloudCornerFromMap->clear();
-        // laserCloudSurfFromMap->clear(); 
         laserCloudDeskewedFromMap->clear();//清理缓存！！！important
         for (int i = 0; i < (int)cloudToExtract->size(); ++i)
         {
-            // *laserCloudCornerFromMap += laserCloudCornerSurroundingVec[i];
-            // *laserCloudSurfFromMap   += laserCloudSurfSurroundingVec[i];
             *laserCloudDeskewedFromMap += laserCloudDeskewedSurroundingVec[i];
         }
 
-        // 3.分别对Corner和Surface特征进行采样
-        
-        // // Downsample the surrounding corner key frames (or map)
-        // downSizeFilterCorner.setInputCloud(laserCloudCornerFromMap);
-        // downSizeFilterCorner.filter(*laserCloudCornerFromMapDS);
-        // // Downsample the surrounding surf key frames (or map)
-        // downSizeFilterSurf.setInputCloud(laserCloudSurfFromMap);
-        // downSizeFilterSurf.filter(*laserCloudSurfFromMapDS);
-
-        // 4.提取局部地图点，并发布出去
+        // 3.提取局部地图点，并发布出去
         localPointCloud->clear();
-        //LLH:选择一下是否使用下采样
-        // *localPointCloud += *laserCloudCornerFromMapDS;
-        // *localPointCloud += *laserCloudSurfFromMapDS;
-        // *localPointCloud += *laserCloudCornerFromMap;
-        // *localPointCloud += *laserCloudSurfFromMap;
         *localPointCloud += *laserCloudDeskewedFromMap;
         // std::cout << "局部地图点数量为：" << localPointCloud->size() << std::endl;
         publishCloud(&pubLocalPointCloud, localPointCloud, timeCurKFStamp, "odom");
     }
     // 点云坐标变换
-    pcl::PointCloud<PointType>::Ptr transformPointCloud(pcl::PointCloud<PointType>::Ptr cloudIn, PointTypePose* transformIn)
-    {
+    pcl::PointCloud<PointType>::Ptr transformPointCloud(pcl::PointCloud<PointType>::Ptr cloudIn, PointTypePose* transformIn) {
         pcl::PointCloud<PointType>::Ptr cloudOut(new pcl::PointCloud<PointType>());
 
         PointType *pointFrom;
@@ -461,7 +422,26 @@ public:
         int unused = system((std::string("exec rm -r ") + savePCDDirectory).c_str());
         unused = system((std::string("mkdir ") + savePCDDirectory).c_str()); ++unused;
         
-        pcl::io::savePCDFileASCII(savePCDDirectory + "RGB_Map.pcd", *outRGBCloud); // 所有RGB特征点云
+        // // 将三维体素内的点提取并保存
+        // for (auto it1 : hashmap_3d_pts.m_map_3d_hash_map) {
+        //     for (auto it2 : it1.second) {
+        //         for (auto it3 : it2.second) {
+        //             RGB_pt_ptr outPointPtr = it3.second;
+        //             pcl::PointXYZRGB outRGBPoint;
+        //             outRGBPoint.x = outPointPtr->m_pos[0];
+        //             outRGBPoint.y = outPointPtr->m_pos[1];
+        //             outRGBPoint.z = outPointPtr->m_pos[2];
+        //             outRGBPoint.r = outPointPtr->m_rgb[0];
+        //             outRGBPoint.g = outPointPtr->m_rgb[1];
+        //             outRGBPoint.b = outPointPtr->m_rgb[2];
+        //             outRGBCloud->push_back(outRGBPoint);
+        //         }
+        //     }
+        // }
+        pcl::io::savePCDFileASCII(savePCDDirectory + "RGB_Map.pcd", *globalCloudRGB); // 所有RGB特征点云（直接投影得到的）
+
+
+        
         cout << "Saving map to pcd files completed🍎" << endl;
     }
 
@@ -494,6 +474,35 @@ public:
         u = fx * Dx_d + cx;
         v = fy * Dy_d + cy;
     }
+
+    /**
+     * @brief 将3D点投影到图像内，并去除过远的点
+     * 
+     * @param in_pt               相机系的3D点
+     * @param u                   投影到的像素坐标
+     * @param v 
+     * @param rgb_pt              投影染色后的点
+     * @param intrinsic_scale     缩放尺度
+     * @return true 
+     * @return false 
+     */
+    bool project_3d_point_in_this_img(const pcl::PointXYZI & curPoint, double &u, double &v, double intrinsic_scale)
+    {
+        if (curPoint.z < 0.01 || curPoint.z > maxDistRGB) return false;//跳过深度为负的点，以及距离大于10m的点
+        /// 从相机系点计算得到对应的像素坐标
+        // cameraProjective(curPoint, u, v);
+        u = fx * curPoint.x / curPoint.z + cx;
+        v = fy * curPoint.y / curPoint.z + cy;
+
+        //判断像素坐标是否落在图像内
+        double scale = 0.05;//缩放系数，用于筛选小于原始图片大小的点
+        if ((u < imgCols * scale + 1) || (u > imgCols * (1 - scale) - 1) ||
+            (v < imgRows * scale + 1) || (v > imgRows * (1 - scale) - 1)) {
+                return false;//跳过不在图片范围内的点
+            }
+
+        return true;
+    }
 };
 
 
@@ -508,8 +517,9 @@ int main(int argc, char** argv)
     RGB rgb;
 
     ROS_INFO("\033[1;32m----> Lidar Map Optimization Started.\033[0m");
-    
+    // 是否启用保存全局地图
     std::thread saveMap_Thread(&RGB::saveMapThread, &rgb);
+        
     ros::spin();
     saveMap_Thread.join();
 
