@@ -91,7 +91,6 @@ public:
 
     // RGB
     int historyCloudSize;                        //20 搜索局部地图时保留多少帧历史点云关键帧
-    float frameVoxelSize;                        //0.02 一帧扫描降采样体素大小
     float RGBVoxelSize;                          //0.05 总的RGB点云输出将采用体素大小
     float maxDistRGB;                            //30.0 投影渲染时点的最大距离
 
@@ -170,7 +169,6 @@ public:
         nh.param<std::string>(PROJECT_NAME + "/savePCDDirectory", savePCDDirectory, "/tmp/loam/");
 
         nh.param<int>(PROJECT_NAME + "/historyCloudSize", historyCloudSize, 20);
-        nh.param<float>(PROJECT_NAME + "/frameVoxelSize", frameVoxelSize, 0.02);
         nh.param<float>(PROJECT_NAME + "/RGBVoxelSize", RGBVoxelSize, 0.05);
         nh.param<float>(PROJECT_NAME + "/maxDistRGB", maxDistRGB, 30.0);
 

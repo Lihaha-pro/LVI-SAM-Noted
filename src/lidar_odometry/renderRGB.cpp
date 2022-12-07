@@ -43,14 +43,14 @@ public:
     double k1, k2, p1, p2;              // 畸变参数
     int imgCols, imgRows;               // 图片尺寸
     ///全局地图
-    Hash_map_3d<long,RGB_pt_ptr> hashmap_3d_pts;
+    Hash_map_3d<long long,RGB_pt_ptr> hashmap_3d_pts;
 
     
     //构造函数
     RGB() {
         subLaserCloudInfo = nh.subscribe<lvi_sam::cloud_info>(PROJECT_NAME + "/lidar/mapping/KeyFrameInfo", 5, &RGB::keyFrameInfoHandler, this, ros::TransportHints().tcpNoDelay());
-        subImagePose = nh.subscribe(PROJECT_NAME + "/vins/odometry/keyframe_pose",  3, &RGB::imagePoseCallback, this, ros::TransportHints().tcpNoDelay());
-        subImage     = nh.subscribe("/camera/color/image_raw", 30, &RGB::imageCallBack, this, ros::TransportHints().tcpNoDelay());
+        subImage     = nh.subscribe("/camera/color/image_raw", 99, &RGB::imageCallBack, this, ros::TransportHints().tcpNoDelay());
+        subImagePose = nh.subscribe(PROJECT_NAME + "/vins/odometry/keyframe_pose",  30, &RGB::imagePoseCallback, this, ros::TransportHints().tcpNoDelay());  
         
         pubLocalPointCloud = nh.advertise<sensor_msgs::PointCloud2>(PROJECT_NAME + "/lidar/mapping/localPointCloud", 1);            // localmap的特征点云
         pubLocalCloudRGB = nh.advertise<sensor_msgs::PointCloud2>(PROJECT_NAME + "/lidar/mapping/localCloudRGB", 1);   
@@ -89,6 +89,13 @@ public:
     
     }
     
+    void processThread() {
+        while (1) {
+            
+        }
+        
+    }
+
     
     /**
      * @brief 图片位姿回调函数
@@ -152,15 +159,24 @@ public:
 
         // Step 2：根据时间戳，得到匹配的原始图片
         m_image.lock();
+        bool findFlag = false;
         pair<cv::Mat, double> curImg_Time;//找到的匹配的原始图片和时间戳
         while (!images_buf.empty()) {
             curImg_Time = images_buf.front();
             images_buf.pop();
-                if (curImg_Time.second == timeImage) {
-                    break;
+            printf("本次遍历时间戳为: %f.\n", curImg_Time.second);
+            if (curImg_Time.second == timeImage) {
+                cout << "找到时间戳匹配的图片" << endl;
+                findFlag = true;
+                break;
             }
         }
-        cv::Mat rawImage = curImg_Time.first;//原始图片
+        cout << "图片队列长度为：" << images_buf.size() << "   第一帧时间戳为" << endl;
+        if (findFlag == false) {
+            m_image.unlock();
+            return;
+        }
+        cv::Mat rawImage = curImg_Time.first.clone();//原始图片
         m_image.unlock();
         // Step 3：在历史点云关键帧中，找到附近的关键帧
         m_cloud.lock();
@@ -213,26 +229,38 @@ public:
         localCloudRGB->clear();
         
         //遍历局部地图中的所有点云///llh！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！
+        // hashmap_3d_pts.m_map_3d_hash_map.clear();
+        cout << "L1" << endl;
         for (int i = 0; i < pointSize; i++) {
             PointType curPoint = (*vinsLocalCloud)[i];
             double u, v;
+            // cout << "L2" << endl;
             bool res = project_3d_point_in_this_img(curPoint, u, v, 1.0);
             if (res == false)
             {
                 continue;
             }
+            // cout << "L3" << endl;//执行到这里，没有到L4
+            // cout << "u = " << u << "   " << "v = " << v << endl;
             // 获取该点的RGB //TODO 这里的颜色还处于直接取值，后面考虑采用插值的方式提取颜色
-            int r = rawImage.at<cv::Vec3b>(v, u)[2];
+            // int r, g, b;
+            // getRGBFromMat(rawImage, u, v, r, g, b);
+            int r = rawImage.at<cv::Vec3b>(v, u)[0];
             int g = rawImage.at<cv::Vec3b>(v, u)[1];
-            int b = rawImage.at<cv::Vec3b>(v, u)[0];
+            int b = rawImage.at<cv::Vec3b>(v, u)[2];
             Eigen::Vector3d rgb_color(r, g, b);
+            // cout << "L4" << endl;
 
-            ///至此认为是有效的3D点，开始维护全局地图
             // 4.1 获取全局体素索引
-            long voxel_x = std::round((*localPointCloud)[i].x / RGBVoxelSize);
-            long voxel_y = std::round((*localPointCloud)[i].y / RGBVoxelSize);
-            long voxel_z = std::round((*localPointCloud)[i].z / RGBVoxelSize);
-            
+            long long voxel_x = std::round((*localPointCloud)[i].x / RGBVoxelSize);
+            long long voxel_y = std::round((*localPointCloud)[i].y / RGBVoxelSize);
+            long long voxel_z = std::round((*localPointCloud)[i].z / RGBVoxelSize);
+            if (voxel_x > LONG_LONG_MAX || voxel_y > LONG_LONG_MAX || voxel_z > LONG_LONG_MAX || voxel_x < LONG_LONG_MIN || voxel_y < LONG_LONG_MIN || voxel_z < LONG_LONG_MIN) {
+                cout << "voxel_x = " << voxel_x << endl;
+                cout << "voxel_y = " << voxel_y << endl;
+                cout << "voxel_z = " << voxel_z << endl;
+            }
+            // cout << "L5" << endl;
             // 4.2 判断是否已经有体素，进行点云插入或更新
             if (hashmap_3d_pts.if_exist(voxel_x, voxel_y, voxel_z) == 0) {//之前不存在，就插入新的点到体素
                 std::shared_ptr<RGB_pts> pt_rgb_temp = std::make_shared<RGB_pts>();
@@ -289,7 +317,7 @@ public:
         cv_bridge::CvImageConstPtr ptr;
         ptr = cv_bridge::toCvCopy(img_msg, sensor_msgs::image_encodings::RGB8);
 
-        cv::Mat show_img = ptr->image; // 得到原始图片
+        cv::Mat show_img = ptr->image.clone(); // 得到原始图片
         
         images_buf.push({show_img, ROS_TIME(img_msg)}); //将图片放入队列中等待处理
         m_image.unlock();
@@ -420,28 +448,10 @@ public:
         // 1.create directory and remove old files, 删除文件夹再重建!!!
         savePCDDirectory = std::getenv("HOME") + savePCDDirectory;
         int unused = system((std::string("exec rm -r ") + savePCDDirectory).c_str());
-        unused = system((std::string("mkdir ") + savePCDDirectory).c_str()); ++unused;
+        unused = system((std::string("mkdir ") + savePCDDirectory).c_str()); 
+        ++unused;
         
-        // // 将三维体素内的点提取并保存
-        // for (auto it1 : hashmap_3d_pts.m_map_3d_hash_map) {
-        //     for (auto it2 : it1.second) {
-        //         for (auto it3 : it2.second) {
-        //             RGB_pt_ptr outPointPtr = it3.second;
-        //             pcl::PointXYZRGB outRGBPoint;
-        //             outRGBPoint.x = outPointPtr->m_pos[0];
-        //             outRGBPoint.y = outPointPtr->m_pos[1];
-        //             outRGBPoint.z = outPointPtr->m_pos[2];
-        //             outRGBPoint.r = outPointPtr->m_rgb[0];
-        //             outRGBPoint.g = outPointPtr->m_rgb[1];
-        //             outRGBPoint.b = outPointPtr->m_rgb[2];
-        //             outRGBCloud->push_back(outRGBPoint);
-        //         }
-        //     }
-        // }
         pcl::io::savePCDFileASCII(savePCDDirectory + "RGB_Map.pcd", *globalCloudRGB); // 所有RGB特征点云（直接投影得到的）
-
-
-        
         cout << "Saving map to pcd files completed🍎" << endl;
     }
 
@@ -488,20 +498,52 @@ public:
      */
     bool project_3d_point_in_this_img(const pcl::PointXYZI & curPoint, double &u, double &v, double intrinsic_scale)
     {
-        if (curPoint.z < 0.01 || curPoint.z > maxDistRGB) return false;//跳过深度为负的点，以及距离大于10m的点
-        /// 从相机系点计算得到对应的像素坐标
-        // cameraProjective(curPoint, u, v);
+        if (curPoint.z < 0.01 || curPoint.z > maxDistRGB || abs(curPoint.x) > maxDistRGB || abs(curPoint.y) > maxDistRGB) return false;//跳过深度为负的点，以及距离大于10m的点
+        
         u = fx * curPoint.x / curPoint.z + cx;
         v = fy * curPoint.y / curPoint.z + cy;
 
-        //判断像素坐标是否落在图像内
-        double scale = 0.05;//缩放系数，用于筛选小于原始图片大小的点
+        //判断像素坐标是否落在图像内，这里是第一次，用于跳过畸变模型来筛选
+        double scale = 0.1;//缩放系数，用于筛选小于原始图片大小的点
+        if ((u < imgCols * scale + 1) || (u > imgCols * (1 - scale) - 1) ||
+            (v < imgRows * scale + 1) || (v > imgRows * (1 - scale) - 1)) {
+                return false;//跳过不在图片范围内的点
+            }
+        /// 从相机系点计算得到对应的像素坐标
+        cameraProjective(curPoint, u, v);
+        // 第二次筛选，过滤掉畸变矫正之后相机视野范围之外的点
         if ((u < imgCols * scale + 1) || (u > imgCols * (1 - scale) - 1) ||
             (v < imgRows * scale + 1) || (v > imgRows * (1 - scale) - 1)) {
                 return false;//跳过不在图片范围内的点
             }
 
         return true;
+    }
+    void getRGBFromMat(const cv::Mat &rawImage, const double &u, const double &v, int &r, int &g, int &b) {
+        // 分别进行rgb三个通道的双线性插值
+        for (int i = 0; i < 3; i++) {
+            int u11, v11, u12, v12, u21, v21, u22, v22;
+            int color11, color21, color12, color22;
+            u11 = static_cast<int>(u);
+            v11 = static_cast<int>(v);
+            u21 = u11 + 1;
+            v21 = v11;
+            u12 = u11;
+            v12 = v11 + 1;
+            u22 = u11 + 1;
+            v22 = v11 + 1;
+            color11 = rawImage.at<cv::Vec3b>(v11, u11)[i];
+            color21 = rawImage.at<cv::Vec3b>(v21, u21)[i];
+            color12 = rawImage.at<cv::Vec3b>(v12, u12)[i];
+            color22 = rawImage.at<cv::Vec3b>(v22, u22)[i];
+            int color = color11 * (u22 - u) * (v22 - v) + 
+                        color21 * (u - u11) * (v22 - v) +
+                        color12 * (u22 - u) * (v - v11) + 
+                        color22 * (u - u11) * (v - v11);
+            if (i == 0) r = color;
+            if (i == 1) g = color;
+            if (i == 2) b = color;
+        }
     }
 };
 
@@ -516,12 +558,13 @@ int main(int argc, char** argv)
 
     RGB rgb;
 
-    ROS_INFO("\033[1;32m----> Lidar Map Optimization Started.\033[0m");
     // 是否启用保存全局地图
     std::thread saveMap_Thread(&RGB::saveMapThread, &rgb);
+    std::thread process(&RGB::processThread, &rgb);
         
     ros::spin();
     saveMap_Thread.join();
+    process.join();
 
     return 0;
 }
