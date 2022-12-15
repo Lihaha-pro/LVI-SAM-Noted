@@ -22,7 +22,7 @@ lvi_sam:
 
   #RGB渲染关键参数
   historyCloudSize: 20                        #搜索局部地图时保留多少帧历史点云关键帧
-  RGBVoxelSize: 0.05                          #总的RGB点云输出将采用体素大小
+  RGBVoxelSize: 0.03                          #总的RGB点云输出将采用体素大小
   maxDistRGB: 30                              #投影渲染时点的最大距离
 
 

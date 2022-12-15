@@ -89,12 +89,6 @@ public:
     
     }
     
-    void processThread() {
-        while (1) {
-            
-        }
-        
-    }
 
     
     /**
@@ -136,7 +130,7 @@ public:
         try{
             listener.waitForTransform("odom", "vins_world", pose_msg->header.stamp, ros::Duration(0.01));
             listener.lookupTransform("odom", "vins_world", pose_msg->header.stamp, transform);
-        } 
+        }
         catch (tf::TransformException ex){
             ROS_ERROR("lidar no tf");
         }
@@ -164,7 +158,7 @@ public:
         while (!images_buf.empty()) {
             curImg_Time = images_buf.front();
             images_buf.pop();
-            printf("本次遍历时间戳为: %f.\n", curImg_Time.second);
+            // printf("本次遍历时间戳为: %f.\n", curImg_Time.second);
             if (curImg_Time.second == timeImage) {
                 cout << "找到时间戳匹配的图片" << endl;
                 findFlag = true;
@@ -174,6 +168,7 @@ public:
         cout << "图片队列长度为：" << images_buf.size() << "   第一帧时间戳为" << endl;
         if (findFlag == false) {
             m_image.unlock();
+            cout << "⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️" << endl;
             return;
         }
         cv::Mat rawImage = curImg_Time.first.clone();//原始图片
@@ -202,7 +197,7 @@ public:
         m_cloud.unlock();
 
         // Step 4：遍历点云，对相机视野内的点进行RGB渲染
-        // 获得从odom系到body系的位姿变换 body系才是相机系
+        // 获得从odom系到vins_camera系的位姿变换 vins_camera系才是相机系
         try{
             listener.waitForTransform("vins_camera", "odom", pose_msg->header.stamp, ros::Duration(0.01));
             listener.lookupTransform("vins_camera", "odom", pose_msg->header.stamp, transform);
@@ -230,7 +225,6 @@ public:
         
         //遍历局部地图中的所有点云///llh！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！
         // hashmap_3d_pts.m_map_3d_hash_map.clear();
-        cout << "L1" << endl;
         for (int i = 0; i < pointSize; i++) {
             PointType curPoint = (*vinsLocalCloud)[i];
             double u, v;
@@ -240,14 +234,12 @@ public:
             {
                 continue;
             }
-            // cout << "L3" << endl;//执行到这里，没有到L4
-            // cout << "u = " << u << "   " << "v = " << v << endl;
             // 获取该点的RGB //TODO 这里的颜色还处于直接取值，后面考虑采用插值的方式提取颜色
-            // int r, g, b;
+            int r, g, b;
             // getRGBFromMat(rawImage, u, v, r, g, b);
-            int r = rawImage.at<cv::Vec3b>(v, u)[0];
-            int g = rawImage.at<cv::Vec3b>(v, u)[1];
-            int b = rawImage.at<cv::Vec3b>(v, u)[2];
+            r = rawImage.at<cv::Vec3b>(v, u)[0];
+            g = rawImage.at<cv::Vec3b>(v, u)[1];
+            b = rawImage.at<cv::Vec3b>(v, u)[2];
             Eigen::Vector3d rgb_color(r, g, b);
             // cout << "L4" << endl;
 
@@ -358,7 +350,7 @@ public:
         thisPose6D.pitch = KF_Info->odomPitch;
         thisPose6D.yaw   = KF_Info->odomYaw;
         thisPose6D.time = timeCurKF;
-        cloudKeyPoses6D->push_back(thisPose6D); // 关键帧的位姿
+        cloudKeyPoses6D->push_back(thisPose6D); // 关键帧的姿态
 
         //特征点云
         pcl::PointCloud<PointType>::Ptr tempCloud;
@@ -560,11 +552,9 @@ int main(int argc, char** argv)
 
     // 是否启用保存全局地图
     std::thread saveMap_Thread(&RGB::saveMapThread, &rgb);
-    std::thread process(&RGB::processThread, &rgb);
         
     ros::spin();
     saveMap_Thread.join();
-    process.join();
 
     return 0;
 }

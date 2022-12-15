@@ -368,7 +368,7 @@ public:
     {
         sensor_msgs::Imu thisImu = imuConverter(*imuMsg);//当前IMU数据
         // publish static tf
-        tfMap2Odom.sendTransform(tf::StampedTransform(map_to_odom, thisImu.header.stamp, "map", "odom"));
+        tfMap2Odom.sendTransform(tf::StampedTransform(map_to_odom, thisImu.header.stamp, "map", "odom"));//这里坐标变换是单位变换
         //一个队列用于预积分和位姿优化，一个用来更新IMU状态
         imuQueOpt.push_back(thisImu);
         imuQueImu.push_back(thisImu);
@@ -446,7 +446,7 @@ public:
         // publish transformation
         tf::Transform tCur;
         tf::poseMsgToTF(odometry.pose.pose, tCur);
-        tf::StampedTransform odom_2_baselink = tf::StampedTransform(tCur, thisImu.header.stamp, "odom", "base_link");
+        tf::StampedTransform odom_2_baselink = tf::StampedTransform(tCur, thisImu.header.stamp, "odom", "base_link");//base_link是机身坐标系
         tfOdom2BaseLink.sendTransform(odom_2_baselink);
     }
 };

@@ -7,7 +7,6 @@ Panels:
         - /Global Options1
         - /Links1
         - /Links1/base_link1
-        - /PointCloud22
       Splitter Ratio: 0.45996275544166565
     Tree Height: 411
   - Class: rviz/Selection
@@ -456,7 +455,7 @@ Visualization Manager:
       Color: 255; 255; 255
       Color Transformer: RGB8
       Decay Time: 0
-      Enabled: false
+      Enabled: true
       Invert Rainbow: false
       Max Color: 255; 255; 255
       Min Color: 0; 0; 0
@@ -471,7 +470,7 @@ Visualization Manager:
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
-      Value: false
+      Value: true
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
@@ -484,7 +483,7 @@ Visualization Manager:
       Color: 255; 255; 255
       Color Transformer: RGB8
       Decay Time: 0
-      Enabled: true
+      Enabled: false
       Invert Rainbow: false
       Max Color: 255; 255; 255
       Min Color: 0; 0; 0
@@ -499,7 +498,7 @@ Visualization Manager:
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
-      Value: true
+      Value: false
   Enabled: true
   Global Options:
     Background Color: 0; 0; 0
@@ -515,7 +514,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/ThirdPersonFollower
-      Distance: 72.69480895996094
+      Distance: 69.75984191894531
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -523,17 +522,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 12.138874053955078
-        Y: 20.21364402770996
-        Z: 7.746345545456279e-06
+        X: 0.8132948875427246
+        Y: 7.298463821411133
+        Z: 1.8193244613939896e-05
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.4103982150554657
+      Pitch: 1.5697963237762451
       Target Frame: odom
-      Yaw: 1.9454127550125122
+      Yaw: 2.8054044246673584
     Saved:
       - Class: rviz/ThirdPersonFollower
         Distance: 10.99838924407959
