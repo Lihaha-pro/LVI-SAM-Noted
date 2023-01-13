@@ -433,7 +433,7 @@ public:
             rate.sleep();
             // publishGlobalMap(); // 发布 全局地图点云(1000m以内)
         }
-
+        return;
         // 以pcd格式保存地图
         cout << "****************************************************" << endl;
         cout << "Saving map to pcd files ...123" << endl;
