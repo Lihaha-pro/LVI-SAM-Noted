@@ -183,10 +183,11 @@ void img_callback(const sensor_msgs::ImageConstPtr &img_msg)
         // 2.get feature depth from lidar point cloud
         pcl::PointCloud<PointType>::Ptr depth_cloud_temp(new pcl::PointCloud<PointType>());
         mtx_lidar.lock();
-        *depth_cloud_temp = *depthCloud; // 5s内的激光点云
+        *depth_cloud_temp = *depthCloud; // 5s内的激光点云 //llh暂时分析时转换到vins_world系下了
         mtx_lidar.unlock();
-
-        sensor_msgs::ChannelFloat32 depth_of_points = depthRegister->get_depth(img_msg->header.stamp, show_img, depth_cloud_temp, trackerData[0].m_camera, feature_points->points);
+        //llh:视觉特征深度估计
+        sensor_msgs::ChannelFloat32 depth_of_points;
+        depth_of_points = depthRegister->get_depth(img_msg->header.stamp, show_img, depth_cloud_temp, trackerData[0].m_camera, feature_points->points);
         feature_points->channels.push_back(depth_of_points);
         
         // 3.发布当前帧的特征点云, 给其他node使用

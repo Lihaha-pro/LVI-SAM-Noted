@@ -350,7 +350,7 @@ public:
         thisPose6D.pitch = KF_Info->odomPitch;
         thisPose6D.yaw   = KF_Info->odomYaw;
         thisPose6D.time = timeCurKF;
-        cloudKeyPoses6D->push_back(thisPose6D); // 关键帧的姿态
+        cloudKeyPoses6D->push_back(thisPose6D); // 关键帧的姿态+位置
 
         //特征点云
         pcl::PointCloud<PointType>::Ptr tempCloud;
@@ -365,7 +365,6 @@ public:
         }
         kdtreeSurroundingKeyPoses->setInputCloud(cloudKeyPoses3D); // create kd-tree，为寻找邻近关键帧做准备
         m_cloud.unlock();
-        
     }
     /**
      * @brief 通过提取到的keyframes, 来提取点云, 从而构造局部地图

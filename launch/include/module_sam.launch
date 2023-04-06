@@ -18,6 +18,6 @@
     <node pkg="$(arg project)"      type="$(arg project)_visual_loop"         name="$(arg project)_visual_loop"          output="screen"     respawn="true"/>
 
     <!-- Image conversion -->
-    <node pkg="image_transport" type="republish" name="$(arg project)_republish" args="compressed in:=/camera/image_raw raw out:=/camera/image_raw" output="screen" respawn="true"/>
+    <node pkg="image_transport" type="republish" name="$(arg project)_republish" args="compressed in:=/camera/color/image_raw raw out:=/camera/color/image_raw" output="screen" respawn="true"/>
 
 </launch>

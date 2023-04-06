@@ -5,10 +5,10 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /Global Options1
-        - /Links1
         - /Links1/base_link1
-      Splitter Ratio: 0.45996275544166565
-    Tree Height: 411
+        - /Visual Feature1/Image Feature1
+      Splitter Ratio: 0.5471698045730591
+    Tree Height: 419
   - Class: rviz/Selection
     Name: Selection
   - Class: rviz/Tool Properties
@@ -21,6 +21,7 @@ Panels:
     Name: Views
     Splitter Ratio: 0.5
   - Class: rviz/Time
+    Experimental: false
     Name: Time
     SyncMode: 0
     SyncSource: Image Feature
@@ -33,23 +34,19 @@ Visualization Manager:
   Displays:
     - Class: rviz/Group
       Displays:
-        - Alpha: 1
-          Class: rviz/Axes
+        - Class: rviz/Axes
           Enabled: true
           Length: 1
           Name: odom
           Radius: 0.30000001192092896
           Reference Frame: odom
-          Show Trail: false
           Value: true
-        - Alpha: 1
-          Class: rviz/Axes
+        - Class: rviz/Axes
           Enabled: true
           Length: 1
           Name: base_link
           Radius: 0.30000001192092896
           Reference Frame: vins_camera
-          Show Trail: false
           Value: true
       Enabled: true
       Name: Links
@@ -88,14 +85,14 @@ Visualization Manager:
         - Alpha: 1
           Autocompute Intensity Bounds: true
           Autocompute Value Bounds:
-            Max Value: 10
-            Min Value: -10
+            Max Value: 214.9508819580078
+            Min Value: -74.61109161376953
             Value: true
-          Axis: Z
+          Axis: X
           Channel Name: intensity
           Class: rviz/PointCloud2
           Color: 255; 255; 255
-          Color Transformer: Intensity
+          Color Transformer: AxisColor
           Decay Time: 0
           Enabled: false
           Invert Rainbow: false
@@ -105,7 +102,7 @@ Visualization Manager:
           Position Transformer: XYZ
           Queue Size: 10
           Selectable: true
-          Size (Pixels): 3
+          Size (Pixels): 5
           Size (m): 0.10000000149011612
           Style: Points
           Topic: /lvi_sam/vins/depth/depth_cloud
@@ -153,10 +150,10 @@ Visualization Manager:
           Color: 0; 85; 255
           Color Transformer: Intensity
           Decay Time: 0
-          Enabled: true
+          Enabled: false
           Invert Rainbow: false
-          Max Color: 255; 255; 255
-          Min Color: 255; 85; 255
+          Max Color: 255; 0; 0
+          Min Color: 0; 0; 0
           Name: Feature cloud
           Position Transformer: XYZ
           Queue Size: 10
@@ -168,7 +165,7 @@ Visualization Manager:
           Unreliable: false
           Use Fixed Frame: false
           Use rainbow: false
-          Value: true
+          Value: false
         - Alpha: 1
           Autocompute Intensity Bounds: true
           Autocompute Value Bounds:
@@ -218,7 +215,6 @@ Visualization Manager:
             Z: 0
           Pose Color: 255; 85; 255
           Pose Style: None
-          Queue Size: 10
           Radius: 0.029999999329447746
           Shaft Diameter: 0.10000000149011612
           Shaft Length: 0.10000000149011612
@@ -242,7 +238,6 @@ Visualization Manager:
             Z: 0
           Pose Color: 255; 85; 255
           Pose Style: None
-          Queue Size: 10
           Radius: 0.029999999329447746
           Shaft Diameter: 0.10000000149011612
           Shaft Length: 0.10000000149011612
@@ -252,8 +247,8 @@ Visualization Manager:
         - Alpha: 1
           Autocompute Intensity Bounds: true
           Autocompute Value Bounds:
-            Max Value: 10.397632598876953
-            Min Value: -2.5180835723876953
+            Max Value: 34.99949264526367
+            Min Value: -1.7074391841888428
             Value: true
           Axis: Z
           Channel Name: intensity
@@ -288,7 +283,7 @@ Visualization Manager:
           Class: rviz/PointCloud2
           Color: 255; 255; 255
           Color Transformer: Intensity
-          Decay Time: 100
+          Decay Time: 10
           Enabled: false
           Invert Rainbow: false
           Max Color: 255; 255; 255
@@ -325,7 +320,7 @@ Visualization Manager:
           Position Transformer: XYZ
           Queue Size: 10
           Selectable: true
-          Size (Pixels): 3
+          Size (Pixels): 5
           Size (m): 0.009999999776482582
           Style: Points
           Topic: /lvi_sam/lidar/mapping/map_global
@@ -441,21 +436,21 @@ Visualization Manager:
           Use Fixed Frame: true
           Use rainbow: true
           Value: false
-      Enabled: true
+      Enabled: false
       Name: Loop Closure
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
-        Max Value: 10
-        Min Value: -10
+        Max Value: 7.606947898864746
+        Min Value: -0.8481525182723999
         Value: true
       Axis: Z
       Channel Name: intensity
       Class: rviz/PointCloud2
       Color: 255; 255; 255
-      Color Transformer: RGB8
+      Color Transformer: AxisColor
       Decay Time: 0
-      Enabled: true
+      Enabled: false
       Invert Rainbow: false
       Max Color: 255; 255; 255
       Min Color: 0; 0; 0
@@ -470,12 +465,12 @@ Visualization Manager:
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
-      Value: true
+      Value: false
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
-        Max Value: 10
-        Min Value: -10
+        Max Value: 9.248176574707031
+        Min Value: -0.9527384638786316
         Value: true
       Axis: Z
       Channel Name: intensity
@@ -491,7 +486,7 @@ Visualization Manager:
       Position Transformer: XYZ
       Queue Size: 10
       Selectable: true
-      Size (Pixels): 1.5
+      Size (Pixels): 3
       Size (m): 0.009999999776482582
       Style: Points
       Topic: /lvi_sam/lidar/mapping/globalCloudRGB
@@ -499,9 +494,37 @@ Visualization Manager:
       Use Fixed Frame: true
       Use rainbow: true
       Value: false
+    - Alpha: 1
+      Autocompute Intensity Bounds: true
+      Autocompute Value Bounds:
+        Max Value: 120.99735260009766
+        Min Value: -122.48516082763672
+        Value: true
+      Axis: Y
+      Channel Name: intensity
+      Class: rviz/PointCloud2
+      Color: 255; 255; 255
+      Color Transformer: Intensity
+      Decay Time: 0
+      Enabled: false
+      Invert Rainbow: false
+      Max Color: 255; 255; 255
+      Min Color: 0; 0; 0
+      Name: PointCloud2
+      Position Transformer: XYZ
+      Queue Size: 1
+      Selectable: true
+      Size (Pixels): 3
+      Size (m): 0.029999999329447746
+      Style: Flat Squares
+      Topic: /lvi_sam/lidar/mapping/localPointCloud
+      Unreliable: false
+      Use Fixed Frame: true
+      Use rainbow: true
+      Value: false
   Enabled: true
   Global Options:
-    Background Color: 0; 0; 0
+    Background Color: 255; 255; 255
     Default Light: true
     Fixed Frame: odom
     Frame Rate: 30
@@ -514,25 +537,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/ThirdPersonFollower
-      Distance: 69.75984191894531
+      Distance: 41.326690673828125
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
-      Field of View: 0.7853981852531433
       Focal Point:
-        X: 0.8132948875427246
-        Y: 7.298463821411133
-        Z: 1.8193244613939896e-05
-      Focal Shape Fixed Size: true
+        X: -4.145662784576416
+        Y: -7.323300361633301
+        Z: -2.0870635509490967
+      Focal Shape Fixed Size: false
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.5697963237762451
-      Target Frame: odom
-      Yaw: 2.8054044246673584
+      Pitch: 0.06539823114871979
+      Target Frame: vins_camera
+      Value: ThirdPersonFollower (rviz)
+      Yaw: 4.800400257110596
     Saved:
       - Class: rviz/ThirdPersonFollower
         Distance: 10.99838924407959
@@ -541,11 +564,10 @@ Visualization Manager:
           Stereo Focal Distance: 1
           Swap Stereo Eyes: false
           Value: false
-        Field of View: 0.7853981852531433
         Focal Point:
           X: 167.8865203857422
           Y: -8.856732368469238
-          Z: -2.2615253669755475e-07
+          Z: -2.2615253669755475e-7
         Focal Shape Fixed Size: true
         Focal Shape Size: 0.05000000074505806
         Invert Z Axis: false
@@ -553,11 +575,12 @@ Visualization Manager:
         Near Clip Distance: 0.009999999776482582
         Pitch: 0.37039825320243835
         Target Frame: odom
+        Value: ThirdPersonFollower (rviz)
         Yaw: 3.1204018592834473
 Window Geometry:
   Displays:
     collapsed: false
-  Height: 1016
+  Height: 997
   Hide Left Dock: false
   Hide Right Dock: false
   Image Depth:
@@ -566,7 +589,7 @@ Window Geometry:
     collapsed: false
   Loop image:
     collapsed: false
-  QMainWindow State: 000000ff00000000fd0000000400000000000002390000039efc020000000cfb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c006100790073010000003d000001d8000000c900fffffffb0000001a0049006d00610067006500200046006500610074007500720065010000021b000001c00000001600fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb00000014004c006f006f007000200069006d00610067006500000004790000010a0000001600fffffffb000000160049006d006100670065002000440065007000740068000000020f000001cc0000001600fffffffb0000000a0049006d00610067006501000004a3000000dc000000000000000000000001000001110000039efc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a00560069006500770073010000003d0000039e000000a400fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e100000197000000030000073800000040fc0100000002fb0000000800540069006d00650000000000000007380000041800fffffffb0000000800540069006d00650100000000000004500000000000000000000003e20000039e00000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd00000004000000000000027e00000353fc020000000cfb0000001200530065006c0065006300740069006f006e00000001e10000009b000000ab00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000abfb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c0061007900730100000069000002070000017800fffffffb0000001a0049006d00610067006500200046006500610074007500720065010000027c000001400000002100fffffffb000000160049006d00610067006500200044006500700074006802000003b60000009d00000280000001e0fb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb00000014004c006f006f007000200069006d00610067006500000004790000010a0000002100fffffffb0000000a0049006d00610067006501000004a3000000dc0000000000000000000000010000014f00000353fc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a005600690065007700730100000069000003530000012300fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e100000197000000030000073800000040fc0100000002fb0000000800540069006d00650000000000000007380000078400fffffffb0000000800540069006d006501000000000000045000000000000000000000039b0000035300000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Selection:
     collapsed: false
   Time:
@@ -575,6 +598,6 @@ Window Geometry:
     collapsed: false
   Views:
     collapsed: false
-  Width: 1848
-  X: 72
-  Y: 27
+  Width: 1920
+  X: 0
+  Y: 45

@@ -389,10 +389,10 @@ public:
 
         if (savePCD == false)
             return;
-
+        
         // 以pcd格式保存地图
         cout << "****************************************************" << endl;
-        cout << "Saving map to pcd files ..." << endl;
+        cout << "Saving map to pcd files ... ORI" << endl;
         // 1.create directory and remove old files, 删除文件夹再重建!!!
         savePCDDirectory = std::getenv("HOME") + savePCDDirectory;
         int unused = system((std::string("exec rm -r ") + savePCDDirectory).c_str());
@@ -1662,6 +1662,25 @@ public:
         thisPose6D.yaw   = latestEstimate.rotation().yaw();
         thisPose6D.time = timeLaserInfoCur;
         cloudKeyPoses6D->push_back(thisPose6D); // 关键帧的位姿
+
+        tf::Quaternion q;/*定义四元数*/
+        q.setRPY(thisPose6D.roll, thisPose6D.pitch, thisPose6D.yaw);/*将欧拉角转换成四元数*/
+        //llh:添加一下轨迹输出
+        // 保存tum格式的路径结果，RESULT_PATH根据自己的路径更改
+        std::ofstream foutC("/home/llh/Documents/path.txt", std::ios::app);
+        foutC.setf(std::ios::fixed, std::ios::floatfield);
+        // 保存结果的精度
+        foutC.precision(5);
+        foutC << thisPose6D.time << " "
+              << thisPose6D.x << " "
+              << thisPose6D.y << " "
+              << thisPose6D.z << " "
+              << q[0] << " "
+              << q[1] << " "
+              << q[2] << " "
+              << q[3] << std::endl;
+        foutC.close();
+
 
         // cout << "****************************************************" << endl;
         // cout << "Pose covariance:" << endl;

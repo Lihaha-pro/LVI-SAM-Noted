@@ -99,9 +99,9 @@ public:
      * 
      * @param stamp_cur 时间戳
      * @param imageCur Mat类型的图片
-     * @param depthCloud 点云
+     * @param depthCloud 点云 vins_world系
      * @param camera_model //TODO 这是啥
-     * @param features_2d //归一化特征点坐标
+     * @param features_2d //归一化特征点坐标(z = 1)
      * @return sensor_msgs::ChannelFloat32 
      */
     sensor_msgs::ChannelFloat32 get_depth(const ros::Time& stamp_cur, const cv::Mat& imageCur, 
@@ -115,7 +115,7 @@ public:
         depth_of_point.values.resize(features_2d.size(), -1);
 
         // 0.2  check if depthCloud available
-        if (depthCloud->size() == 0)
+        if (depthCloud->size() == 0)//llh这里修改了哈！
             return depth_of_point;
 
         // 0.3 look up transform at current image time
@@ -139,7 +139,7 @@ public:
         Eigen::Affine3f transNow = pcl::getTransformation(xCur, yCur, zCur, rollCur, pitchCur, yawCur);
 
         // 0.4 transform cloud from global frame to camera frame
-        //llh:这里点云本来已经转换到vins_world系下，这里又转到body系下
+        //llh:这里点云本来已经转换到vins_world系下，这里又转到vins_body_ros系下（好像是从vins_world->vins_body_ros）
         pcl::PointCloud<PointType>::Ptr depth_cloud_local(new pcl::PointCloud<PointType>());
         pcl::transformPointCloud(*depthCloud, *depth_cloud_local, transNow.inverse());
 
@@ -189,7 +189,7 @@ public:
             }
         }
 
-        // 4. extract downsampled depth cloud from range image
+        // 4. extract downsampled depth cloud from range image 其实就是去除FLT_MAX这样没有填充的点
         pcl::PointCloud<PointType>::Ptr depth_cloud_local_filter2(new pcl::PointCloud<PointType>());
         for (int i = 0; i < num_bins; ++i)
         {
@@ -233,6 +233,7 @@ public:
             kdtree->nearestKSearch(features_3d_sphere->points[i], 3, pointSearchInd, pointSearchSqDis);
             if (pointSearchInd.size() == 3 && pointSearchSqDis[2] < dist_sq_threshold)
             {
+                // continue;///跳出，认为没有找到深度（李琳昊自己临时加的）
                 float r1 = depth_cloud_unit_sphere->points[pointSearchInd[0]].intensity;
                 Eigen::Vector3f A(depth_cloud_unit_sphere->points[pointSearchInd[0]].x * r1,
                                   depth_cloud_unit_sphere->points[pointSearchInd[0]].y * r1,
@@ -254,11 +255,17 @@ public:
                                   features_3d_sphere->points[i].z);
 
                 Eigen::Vector3f N = (A - B).cross(B - C);
+                //llh 根据法向量与射线向量夹角去除错误匹配
+                float theta = acos((V[0] * N[0] + V[1] * N[1] + V[2] * N[2])/(V.norm() * N.norm())) / 3.14 * 180;
+                if(theta > 30) continue;
+
                 float s = (N(0) * A(0) + N(1) * A(1) + N(2) * A(2)) 
                         / (N(0) * V(0) + N(1) * V(1) + N(2) * V(2));
 
                 float min_depth = min(r1, min(r2, r3));
                 float max_depth = max(r1, max(r2, r3));
+                
+                
                 if (max_depth - min_depth > 2 || s <= 0.5)
                 {
                     continue;

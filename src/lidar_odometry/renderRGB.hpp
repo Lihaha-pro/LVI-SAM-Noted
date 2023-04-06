@@ -196,7 +196,7 @@ class RGB_pts
      * 
      * @param rgb 点的RGB颜色
      * @param obs_dis 该点到相机的距离
-     * @param obs_sigma 观测方差
+     * @param obs_sigma 观测方差[15, 15, 15]
      * @param obs_time 观测到这个点相机的时间
      * @return int 0没有更新 1更新
      */
